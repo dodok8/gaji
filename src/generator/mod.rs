@@ -10,7 +10,7 @@ use tokio::fs;
 use crate::cache::Cache;
 use crate::fetcher::GitHubFetcher;
 
-use self::templates::{BASE_TYPES_TEMPLATE, GET_ACTION_BASE_TEMPLATE};
+use self::templates::{BASE_TYPES_TEMPLATE, GET_ACTION_BASE_TEMPLATE, GET_ACTION_RUNTIME_TEMPLATE};
 use self::types::generate_type_definition;
 
 pub struct TypeGenerator {
@@ -137,15 +137,16 @@ impl TypeGenerator {
         let index_path = self.output_dir.join("index.d.ts");
         fs::write(index_path, index_content).await?;
 
+        let runtime_path = self.output_dir.join("index.ts");
+        fs::write(runtime_path, GET_ACTION_RUNTIME_TEMPLATE).await?;
+
         Ok(())
     }
 }
 
 pub fn action_ref_to_filename(action_ref: &str) -> String {
     action_ref
-        .replace('/', "-")
-        .replace('@', "-")
-        .replace('.', "-")
+        .replace(['/', '@', '.'], "-")
         + ".d.ts"
 }
 

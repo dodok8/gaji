@@ -128,7 +128,7 @@ fn generate_outputs_interface(
         output.push_str(&format!("    {}: string;\n", field_name));
     }
 
-    output.push_str("}");
+    output.push('}');
 
     output
 }
