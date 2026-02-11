@@ -1,6 +1,6 @@
 // Hello Checkout - Test file for gha-ts parser
 // This file is used to test the TypeScript parser and type generation
-import { getAction } from "../../generated";
+import { getAction } from "../../generated/index.ts";
 
 const checkout = getAction("actions/checkout@v4");
 const setupNode = getAction("actions/setup-node@v4");
@@ -11,7 +11,12 @@ const workflow = {
     jobs: {
         build: {
             steps: [
-                checkout({ name: "Checkout code" }),
+                checkout({
+                    name: "Checkout code",
+                    with: {
+                        "fetch-depth": 1,
+                    },
+                }),
                 setupNode({
                     name: "Setup Node.js",
                     with: {
