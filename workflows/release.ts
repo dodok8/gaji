@@ -171,10 +171,6 @@ const publishNpm = new Job("ubuntu-latest", {
     name: "Upgrade npm",
     run: "npm install -g npm@latest",
   })
-  .addStep({
-    name: "Sync versions",
-    run: "bash scripts/sync-versions.sh",
-  })
   .addStep(
     downloadArtifact({
       with: {
@@ -191,6 +187,10 @@ const publishNpm = new Job("ubuntu-latest", {
       '  cp -r "$dir"/* "npm/platform-$PLATFORM/"',
       "done",
     ].join("\n"),
+  })
+  .addStep({
+    name: "Sync versions",
+    run: "bash scripts/sync-versions.sh",
   })
   .addStep({
     name: "Publish platform packages",
