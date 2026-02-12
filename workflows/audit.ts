@@ -1,6 +1,6 @@
 import { getAction, Job, Workflow } from "../generated/index.js";
 
-const checkout = getAction("actions/checkout@v4");
+const checkout = getAction("actions/checkout@v5");
 
 const audit = new Job("ubuntu-latest")
   .addStep(checkout({}))

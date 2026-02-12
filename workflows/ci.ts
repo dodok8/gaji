@@ -3,7 +3,7 @@
 import { getAction, Job, Workflow } from "../generated/index.js";
 
 const rustCache = getAction("Swatinem/rust-cache@v2");
-const checkout = getAction("actions/checkout@v4");
+const checkout = getAction("actions/checkout@v5");
 const rustToolchain = getAction("dtolnay/rust-toolchain@stable");
 
 const fmt = new Job("ubuntu-latest")

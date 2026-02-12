@@ -1,7 +1,7 @@
 // Build gaji workflows and commit generated YAML
 import { getAction, Job, Workflow } from "../generated/index.js";
 
-const checkout = getAction("actions/checkout@v4");
+const checkout = getAction("actions/checkout@v5");
 const rustToolchain = getAction("dtolnay/rust-toolchain@stable");
 const rustCache = getAction("Swatinem/rust-cache@v2");
 
