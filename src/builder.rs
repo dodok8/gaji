@@ -48,12 +48,7 @@ impl WorkflowBuilder {
                     built_files.extend(output_paths);
                 }
                 Err(e) => {
-                    eprintln!(
-                        "{} Failed to build {}: {}",
-                        "❌".red(),
-                        file.display(),
-                        e
-                    );
+                    eprintln!("{} Failed to build {}: {}", "❌".red(), file.display(), e);
                 }
             }
         }
@@ -156,18 +151,19 @@ impl WorkflowBuilder {
 
             if self.dry_run {
                 // Print YAML to stdout without writing files
-                println!(
-                    "--- {} ({}) ---",
-                    build_output.id,
-                    build_output.output_type
-                );
+                println!("--- {} ({}) ---", build_output.id, build_output.output_type);
                 print!("{}", yaml_content);
                 continue;
             }
 
             // Determine output directory based on type
             let out_dir = if build_output.output_type == "action" {
-                let action_dir = self.output_dir.parent().unwrap_or(Path::new(".")).join("actions").join(&build_output.id);
+                let action_dir = self
+                    .output_dir
+                    .parent()
+                    .unwrap_or(Path::new("."))
+                    .join("actions")
+                    .join(&build_output.id);
                 fs::create_dir_all(&action_dir).await?;
                 action_dir
             } else {
@@ -191,17 +187,9 @@ impl WorkflowBuilder {
                 );
 
                 fs::write(&output_path, final_content).await?;
-                println!(
-                    "   {} Wrote {}",
-                    "✅".green(),
-                    output_path.display()
-                );
+                println!("   {} Wrote {}", "✅".green(), output_path.display());
             } else {
-                println!(
-                    "   {} {} (unchanged)",
-                    "⏭️".dimmed(),
-                    output_path.display()
-                );
+                println!("   {} {} (unchanged)", "⏭️".dimmed(), output_path.display());
             }
 
             // Handle node shell file copying
@@ -224,10 +212,7 @@ fn execute_workflow_npx(workflow_path: &Path) -> Result<String> {
         Ok(output) if output.status.success() => Ok(String::from_utf8(output.stdout)?),
         Ok(output) => {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            Err(anyhow::anyhow!(
-                "Failed to execute workflow:\n{}",
-                stderr
-            ))
+            Err(anyhow::anyhow!("Failed to execute workflow:\n{}", stderr))
         }
         Err(_) => {
             // Try ts-node as fallback
@@ -240,10 +225,7 @@ fn execute_workflow_npx(workflow_path: &Path) -> Result<String> {
                 Ok(String::from_utf8(output.stdout)?)
             } else {
                 let stderr = String::from_utf8_lossy(&output.stderr);
-                Err(anyhow::anyhow!(
-                    "Failed to execute workflow:\n{}",
-                    stderr
-                ))
+                Err(anyhow::anyhow!("Failed to execute workflow:\n{}", stderr))
             }
         }
     }
@@ -259,8 +241,7 @@ fn json_to_yaml(json_str: &str) -> Result<String> {
 }
 
 fn validate_workflow_yaml(yaml: &str) -> Result<()> {
-    let value: serde_yaml::Value =
-        serde_yaml::from_str(yaml).context("Invalid YAML syntax")?;
+    let value: serde_yaml::Value = serde_yaml::from_str(yaml).context("Invalid YAML syntax")?;
 
     let mapping = value
         .as_mapping()

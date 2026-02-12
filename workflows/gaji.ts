@@ -9,6 +9,7 @@ const buildWorkflows = new Job("ubuntu-latest")
   .addStep(checkout({
     with: {
       token: "${{ secrets.GITHUB_TOKEN }}",
+      "fetch-depth": 1,
     },
   }))
   .addStep(rustToolchain({}))
@@ -18,6 +19,10 @@ const buildWorkflows = new Job("ubuntu-latest")
     run: "cargo build --release",
   })
   .addStep({
+    name: "Generate Type",
+    run: "./target/release/gaji dev",
+  })
+  .addStep({
     name: "Generate workflows",
     run: "./target/release/gaji build",
   })
@@ -25,11 +30,11 @@ const buildWorkflows = new Job("ubuntu-latest")
     name: "Check for changes",
     id: "changes",
     run: [
-      'if git diff --quiet .github/workflows/; then',
+      "if git diff --quiet .github/workflows/; then",
       '  echo "changed=false" >> $GITHUB_OUTPUT',
-      'else',
+      "else",
       '  echo "changed=true" >> $GITHUB_OUTPUT',
-      'fi',
+      "fi",
     ].join("\n"),
   })
   .addStep({

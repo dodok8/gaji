@@ -188,13 +188,12 @@ impl GitHubFetcher {
                             tokio::time::sleep(delay).await;
                             continue;
                         }
-                        return Err(anyhow::anyhow!("Rate limited after {} retries", MAX_RETRIES));
-                    } else {
                         return Err(anyhow::anyhow!(
-                            "HTTP error {}: {}",
-                            response.status(),
-                            url
+                            "Rate limited after {} retries",
+                            MAX_RETRIES
                         ));
+                    } else {
+                        return Err(anyhow::anyhow!("HTTP error {}: {}", response.status(), url));
                     }
                 }
                 Err(e) => {

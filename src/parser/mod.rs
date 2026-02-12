@@ -27,11 +27,8 @@ impl TypeScriptParser {
         let parser_return = Parser::new(&self.allocator, source, source_type).parse();
 
         if !parser_return.errors.is_empty() {
-            let error_messages: Vec<String> = parser_return
-                .errors
-                .iter()
-                .map(|e| e.to_string())
-                .collect();
+            let error_messages: Vec<String> =
+                parser_return.errors.iter().map(|e| e.to_string()).collect();
             return Err(anyhow::anyhow!(
                 "Parse errors: {}",
                 error_messages.join(", ")

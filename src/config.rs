@@ -5,8 +5,7 @@ use serde::{Deserialize, Serialize};
 
 const CONFIG_FILE: &str = ".gaji.toml";
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Config {
     #[serde(default)]
     pub project: ProjectConfig,
@@ -55,7 +54,6 @@ pub struct BuildConfig {
 pub struct GitHubConfig {
     pub token: Option<String>,
 }
-
 
 impl Default for ProjectConfig {
     fn default() -> Self {
@@ -146,7 +144,6 @@ impl Config {
         PathBuf::from(&self.project.generated_dir)
     }
 }
-
 
 #[cfg(test)]
 mod tests {

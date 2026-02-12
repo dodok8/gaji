@@ -9,7 +9,7 @@ use oxc_parser::Parser;
 use oxc_semantic::SemanticBuilder;
 use oxc_span::SourceType;
 use oxc_transformer::{TransformOptions, Transformer};
-use rquickjs::{Context as JsContext, Runtime as JsRuntime, function::Func};
+use rquickjs::{function::Func, Context as JsContext, Runtime as JsRuntime};
 
 /// Output from a single __gha_build call
 #[derive(Debug, Clone)]
@@ -24,8 +24,8 @@ pub struct BuildOutput {
 /// Uses the oxc pipeline: Parser -> SemanticBuilder -> Transformer -> Codegen
 pub fn strip_typescript(source: &str, filename: &str) -> Result<String> {
     let allocator = Allocator::default();
-    let source_type = SourceType::from_path(Path::new(filename))
-        .unwrap_or_else(|_| SourceType::tsx());
+    let source_type =
+        SourceType::from_path(Path::new(filename)).unwrap_or_else(|_| SourceType::tsx());
 
     let parser_ret = Parser::new(&allocator, source, source_type).parse();
     if !parser_ret.errors.is_empty() {

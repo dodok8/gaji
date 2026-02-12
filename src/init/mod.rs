@@ -314,11 +314,7 @@ async fn try_generate_initial_types(root: &Path) {
     match generate_initial_types(root).await {
         Ok(()) => {}
         Err(e) => {
-            eprintln!(
-                "{} Could not generate initial types: {}",
-                "⚠️ ".yellow(),
-                e
-            );
+            eprintln!("{} Could not generate initial types: {}", "⚠️ ".yellow(), e);
             eprintln!("   Run 'gaji dev' later to generate types.");
         }
     }
