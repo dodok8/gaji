@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.5](https://github.com/dodok8/gaji/compare/v0.2.4...v0.2.5) - 2026-02-12
+
+### Other
+
+- change output_dir to .github with type-based subdirectories ([#20](https://github.com/dodok8/gaji/pull/20))
+
 ## [0.2.4](https://github.com/dodok8/gaji/compare/v0.2.3...v0.2.4) - 2026-02-12
 
 ### Fixed
