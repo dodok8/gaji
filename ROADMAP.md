@@ -122,7 +122,6 @@ Type-safe GitHub Actions workflows in TypeScript - Complete Development Plan
       Init { /* ... */ },
       Dev { /* ... */ },
       Build { /* ... */ },
-      Watch { /* ... */ },
       Add { action: String },
       Clean,
   }

@@ -77,7 +77,6 @@ export const ci = new Workflow('ci', {
 - `gha-ts init` - Initialize a new project
 - `gha-ts dev` - Start development mode with file watching
 - `gha-ts build` - Build TypeScript workflows to YAML
-- `gha-ts watch` - Watch for file changes
 - `gha-ts add <action>` - Add a new action and generate types
 - `gha-ts clean` - Clean generated files
 

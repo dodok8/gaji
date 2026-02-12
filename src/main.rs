@@ -4,9 +4,9 @@ use anyhow::Result;
 use clap::Parser;
 use colored::Colorize;
 
-use gha_ts::cli::{Cli, Commands};
 use gha_ts::builder::WorkflowBuilder;
 use gha_ts::cache::Cache;
+use gha_ts::cli::{Cli, Commands};
 use gha_ts::config::Config;
 use gha_ts::generator::TypeGenerator;
 use gha_ts::parser;
@@ -30,9 +30,6 @@ async fn main() -> Result<()> {
         }
         Commands::Build { input, output } => {
             cmd_build(&input, &output).await?;
-        }
-        Commands::Watch { dir } => {
-            cmd_watch(&dir).await?;
         }
         Commands::Add { action } => {
             cmd_add(&action).await?;
@@ -118,19 +115,9 @@ async fn cmd_build(input: &str, output: &str) -> Result<()> {
     if built.is_empty() {
         println!("{} No workflows built", "⚠️".yellow());
     } else {
-        println!(
-            "\n{} Built {} workflow(s)",
-            "✅".green(),
-            built.len()
-        );
+        println!("\n{} Built {} workflow(s)", "✅".green(), built.len());
     }
 
-    Ok(())
-}
-
-async fn cmd_watch(dir: &str) -> Result<()> {
-    let path = PathBuf::from(dir);
-    watcher::watch_directory(&path).await?;
     Ok(())
 }
 
@@ -146,11 +133,7 @@ async fn cmd_add(action: &str) -> Result<()> {
     match generator.generate_types_for_refs(&refs).await {
         Ok(files) => {
             for file in files {
-                println!(
-                    "{} Generated {}",
-                    "✅".green(),
-                    file.display()
-                );
+                println!("{} Generated {}", "✅".green(), file.display());
             }
         }
         Err(e) => {

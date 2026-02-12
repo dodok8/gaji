@@ -49,13 +49,6 @@ pub enum Commands {
         output: String,
     },
 
-    /// Watch for file changes and regenerate types
-    Watch {
-        /// Directory to watch
-        #[arg(short, long, default_value = "workflows")]
-        dir: String,
-    },
-
     /// Add a new action and generate types
     Add {
         /// Action reference (e.g., actions/checkout@v4)
