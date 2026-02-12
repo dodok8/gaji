@@ -33,8 +33,11 @@ npm install -g gha-ts
 # Initialize a new project
 gha-ts init
 
-# Start development mode (watch for changes)
+# Run a one-time dev scan
 gha-ts dev
+
+# Run dev mode and keep watching for changes
+gha-ts dev --watch
 
 # Build workflows to YAML
 gha-ts build
@@ -75,7 +78,8 @@ export const ci = new Workflow('ci', {
 ### Commands
 
 - `gha-ts init` - Initialize a new project
-- `gha-ts dev` - Start development mode with file watching
+- `gha-ts dev` - One-time scan and type generation
+- `gha-ts dev --watch` - Keep watching for changes after the initial scan
 - `gha-ts build` - Build TypeScript workflows to YAML
 - `gha-ts add <action>` - Add a new action and generate types
 - `gha-ts clean` - Clean generated files

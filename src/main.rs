@@ -25,8 +25,8 @@ async fn main() -> Result<()> {
         } => {
             cmd_init(force, skip_examples, migrate, interactive).await?;
         }
-        Commands::Dev { dir } => {
-            cmd_dev(&dir).await?;
+        Commands::Dev { dir, watch } => {
+            cmd_dev(&dir, watch).await?;
         }
         Commands::Build { input, output } => {
             cmd_build(&input, &output).await?;
@@ -71,7 +71,7 @@ async fn cmd_init(
     Ok(())
 }
 
-async fn cmd_dev(dir: &str) -> Result<()> {
+async fn cmd_dev(dir: &str, watch: bool) -> Result<()> {
     println!("{} Starting development mode...\n", "🚀".green());
 
     // Initial scan
@@ -99,8 +99,12 @@ async fn cmd_dev(dir: &str) -> Result<()> {
         }
     }
 
-    // Start watching
-    watcher::watch_directory(&path).await?;
+    if watch {
+        // Start watching
+        watcher::watch_directory(&path).await?;
+    } else {
+        println!("{} Done. Run with --watch to keep watching.", "✓".green());
+    }
 
     Ok(())
 }

@@ -31,11 +31,15 @@ pub enum Commands {
         interactive: bool,
     },
 
-    /// Start development mode with file watching
+    /// Start development mode (one-time scan by default)
     Dev {
         /// Directory to watch
         #[arg(short, long, default_value = "workflows")]
         dir: String,
+
+        /// Keep watching for changes after the initial scan
+        #[arg(long)]
+        watch: bool,
     },
 
     /// Build TypeScript workflows to YAML
