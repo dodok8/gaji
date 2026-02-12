@@ -4,13 +4,13 @@ use anyhow::Result;
 use clap::Parser;
 use colored::Colorize;
 
-use gha_ts::builder::WorkflowBuilder;
-use gha_ts::cache::Cache;
-use gha_ts::cli::{Cli, Commands};
-use gha_ts::config::Config;
-use gha_ts::generator::TypeGenerator;
-use gha_ts::parser;
-use gha_ts::watcher;
+use gaji::builder::WorkflowBuilder;
+use gaji::cache::Cache;
+use gaji::cli::{Cli, Commands};
+use gaji::config::Config;
+use gaji::generator::TypeGenerator;
+use gaji::parser;
+use gaji::watcher;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -48,7 +48,7 @@ async fn cmd_init(
     _migrate: bool,
     _interactive: bool,
 ) -> Result<()> {
-    println!("{} Initializing gha-ts project...\n", "🚀".green());
+    println!("{} Initializing gaji project...\n", "🚀".green());
 
     // Create directories
     tokio::fs::create_dir_all("workflows").await?;
@@ -60,13 +60,13 @@ async fn cmd_init(
     // Create config file
     let config = Config::default();
     config.save()?;
-    println!("{} Created .gha-ts.toml", "✓".green());
+    println!("{} Created .gaji.toml", "✓".green());
 
     println!("\n{} Project initialized!\n", "✨".green());
     println!("Next steps:");
     println!("  1. Create workflow files in workflows/");
-    println!("  2. Run: gha-ts dev");
-    println!("  3. Run: gha-ts build");
+    println!("  2. Run: gaji dev");
+    println!("  3. Run: gaji build");
 
     Ok(())
 }
