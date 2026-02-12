@@ -1,5 +1,5 @@
-use crate::fetcher::{ActionInput, ActionMetadata};
 use super::action_ref_to_interface_name;
+use crate::fetcher::{ActionInput, ActionMetadata};
 
 pub fn generate_type_definition(action_ref: &str, metadata: &ActionMetadata) -> String {
     let interface_name = action_ref_to_interface_name(action_ref);

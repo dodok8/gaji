@@ -15,8 +15,7 @@ pub fn discover_workflows(root: &Path) -> Result<Vec<PathBuf>> {
         .filter_map(|entry| entry.ok())
         .filter(|entry| {
             let ext = entry.path().extension().map(|s| s.to_owned());
-            ext.as_deref() == Some(OsStr::new("yml"))
-                || ext.as_deref() == Some(OsStr::new("yaml"))
+            ext.as_deref() == Some(OsStr::new("yml")) || ext.as_deref() == Some(OsStr::new("yaml"))
         })
         .map(|entry| entry.path())
         .collect();
@@ -55,12 +54,7 @@ pub async fn migrate_workflows(root: &Path, workflows: &[PathBuf]) -> Result<()>
                 println!("  {} Backed up to {}", "✓".green(), backup_path.display());
             }
             Err(e) => {
-                eprintln!(
-                    "  {} Failed to migrate {}: {}",
-                    "✗".red(),
-                    workflow_name,
-                    e
-                );
+                eprintln!("  {} Failed to migrate {}: {}", "✗".red(), workflow_name, e);
             }
         }
     }
@@ -113,10 +107,7 @@ fn generate_typescript_from_yaml(yaml_content: &str, workflow_id: &str) -> Resul
                 .unwrap_or("ubuntu-latest");
 
             let var = job_id_str.replace('-', "_");
-            ts.push_str(&format!(
-                "const {} = new Job(\"{}\")\n",
-                var, runs_on
-            ));
+            ts.push_str(&format!("const {} = new Job(\"{}\")\n", var, runs_on));
 
             // Steps
             if let Some(steps) = job_def.get("steps").and_then(|s| s.as_sequence()) {
@@ -175,17 +166,11 @@ fn generate_step(ts: &mut String, step: &serde_yaml::Value, actions: &[String]) 
             ts.push_str(&format!("    .addStep({}({{\n", var_name));
         } else {
             ts.push_str("    .addStep({\n");
-            ts.push_str(&format!(
-                "        uses: \"{}\",\n",
-                escape_js_string(uses)
-            ));
+            ts.push_str(&format!("        uses: \"{}\",\n", escape_js_string(uses)));
         }
 
         if let Some(name) = step.get("name").and_then(|v| v.as_str()) {
-            ts.push_str(&format!(
-                "        name: \"{}\",\n",
-                escape_js_string(name)
-            ));
+            ts.push_str(&format!("        name: \"{}\",\n", escape_js_string(name)));
         }
 
         if let Some(with) = step.get("with").and_then(|v| v.as_mapping()) {
@@ -239,10 +224,7 @@ fn generate_step(ts: &mut String, step: &serde_yaml::Value, actions: &[String]) 
         // Run step
         ts.push_str("    .addStep({\n");
         if let Some(name) = step.get("name").and_then(|v| v.as_str()) {
-            ts.push_str(&format!(
-                "        name: \"{}\",\n",
-                escape_js_string(name)
-            ));
+            ts.push_str(&format!("        name: \"{}\",\n", escape_js_string(name)));
         }
         if run.contains('\n') {
             ts.push_str(&format!("        run: `{}`", run.replace('`', "\\`")));
@@ -347,9 +329,14 @@ fn yaml_value_to_js(value: &serde_yaml::Value, indent: usize) -> String {
                 return "[]".to_string();
             }
             // Check if all items are simple (scalars)
-            let all_simple = seq
-                .iter()
-                .all(|v| matches!(v, serde_yaml::Value::String(_) | serde_yaml::Value::Number(_) | serde_yaml::Value::Bool(_)));
+            let all_simple = seq.iter().all(|v| {
+                matches!(
+                    v,
+                    serde_yaml::Value::String(_)
+                        | serde_yaml::Value::Number(_)
+                        | serde_yaml::Value::Bool(_)
+                )
+            });
 
             if all_simple {
                 let items: Vec<String> = seq.iter().map(|v| yaml_value_to_js(v, 0)).collect();

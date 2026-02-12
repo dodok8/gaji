@@ -13,11 +13,7 @@ use crate::parser;
 const DEBOUNCE_DURATION: Duration = Duration::from_millis(300);
 
 pub async fn watch_directory(dir: &Path) -> Result<()> {
-    println!(
-        "{} Watching {} for changes...",
-        "👀".green(),
-        dir.display()
-    );
+    println!("{} Watching {} for changes...", "👀".green(), dir.display());
     println!("{}", "Press Ctrl+C to stop".dimmed());
 
     let (tx, rx) = channel();
