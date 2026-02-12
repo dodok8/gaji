@@ -80,8 +80,8 @@ wf.build("integration-test");
     // Parse back as YAML and verify required fields
     let yaml_value: serde_yaml::Value = serde_yaml::from_str(&yaml_str).unwrap();
     let mapping = yaml_value.as_mapping().unwrap();
-    assert!(mapping.contains_key(&serde_yaml::Value::String("on".to_string())));
-    assert!(mapping.contains_key(&serde_yaml::Value::String("jobs".to_string())));
+    assert!(mapping.contains_key(serde_yaml::Value::String("on".to_string())));
+    assert!(mapping.contains_key(serde_yaml::Value::String("jobs".to_string())));
 }
 
 /// Test that multiple workflow.build() calls produce multiple outputs.
