@@ -242,6 +242,7 @@ const publishCrates = new Job("ubuntu-latest", {
       "CRATES_RESPONSE=$(curl -sLS https://crates.io/api/v1/trusted_publishing/tokens \\",
       "  -X POST \\",
       "  -H 'Content-Type: application/json' \\",
+      "  -H 'User-Agent: gaji CI (https://github.com/dodok8/gaji)' \\",
       '  -d "{\\"oidc_token\\": \\"$OIDC_TOKEN\\"}")',
       'CRATES_TOKEN=$(echo "$CRATES_RESPONSE" | jq -r ".token")',
       'if [ -z "$CRATES_TOKEN" ] || [ "$CRATES_TOKEN" = "null" ]; then',
