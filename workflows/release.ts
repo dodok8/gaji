@@ -184,6 +184,7 @@ const publishNpm = new Job("ubuntu-latest", {
       'for dir in npm-artifacts/npm-*/; do',
       '  PLATFORM=$(basename "$dir" | sed "s/npm-//")',
       '  cp -r "$dir"/* "npm/platform-$PLATFORM/"',
+      '  chmod +x "npm/platform-$PLATFORM/bin/"* 2>/dev/null || true',
       "done",
     ].join("\n"),
   })

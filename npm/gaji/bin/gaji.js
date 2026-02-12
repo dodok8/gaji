@@ -36,6 +36,12 @@ function getBinaryPath() {
     const pkgPath = require.resolve(`${packageName}/package.json`);
     const binPath = path.join(path.dirname(pkgPath), "bin", binName);
     if (fs.existsSync(binPath)) {
+      // Ensure the binary is executable (permissions can be lost during npm packaging)
+      if (process.platform !== "win32") {
+        try {
+          fs.chmodSync(binPath, 0o755);
+        } catch (_) {}
+      }
       return binPath;
     }
   } catch (_) {
@@ -58,7 +64,7 @@ try {
     env: process.env,
   });
 } catch (e) {
-  if (e.status !== undefined) {
+  if (e.status != null) {
     process.exit(e.status);
   }
   console.error(e.message);
