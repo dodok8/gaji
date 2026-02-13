@@ -1,4 +1,9 @@
-import { CallAction, JavaScriptAction, Job, Workflow } from "../generated/index.js";
+import {
+  CallAction,
+  JavaScriptAction,
+  Job,
+  Workflow,
+} from "../generated/index.js";
 
 // Define the JavaScript action
 const action = new JavaScriptAction(
@@ -45,7 +50,9 @@ const workflow = new Workflow({
   name: "Use JavaScript Action",
   on: {
     push: {
-      branches: ["main"],
+      paths: [
+        "dist",
+      ],
     },
   },
 }).addJob("hello_world_job", helloWorldJob);
