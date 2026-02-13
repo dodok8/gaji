@@ -6,7 +6,7 @@ hero:
   text: Type-safe GitHub Actions
   tagline: Write GitHub Actions workflows in TypeScript with full type safety
   image:
-    src: /logo.jpg
+    src: /logo.png
     alt: gaji
   actions:
     - theme: brand

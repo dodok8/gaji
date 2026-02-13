@@ -6,7 +6,7 @@ hero:
   text: 타입 안전한 GitHub Actions
   tagline: TypeScript로 완전한 타입 안전성을 갖춘 GitHub Actions 워크플로우 작성
   image:
-    src: /logo.jpg
+    src: /logo.png
     alt: gaji
   actions:
     - theme: brand

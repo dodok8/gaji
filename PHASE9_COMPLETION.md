@@ -6,7 +6,7 @@
 - **Location**: `docs/`
 - **Features**:
   - Full i18n support (English & Korean)
-  - Logo integration (logo.jpg)
+  - Logo integration (logo.png)
   - Responsive navigation
   - Search functionality
   - Dark mode support

@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="logo.jpg" alt="gaji logo" width="200"/>
+  <img src="logo.png" alt="gaji logo" width="200"/>
   <h1>gaji</h1>
   <p>Type-safe GitHub Actions workflows in TypeScript</p>
   <p><em>GitHub Actions Justified Improvements</em></p>

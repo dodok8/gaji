@@ -5,7 +5,7 @@ export default defineConfig({
   description: "Type-safe GitHub Actions workflows in TypeScript",
 
   head: [
-    ["link", { rel: "icon", href: "/logo.jpg" }],
+    ["link", { rel: "icon", href: "/logo.png" }],
   ],
 
   locales: {
@@ -112,7 +112,7 @@ export default defineConfig({
   },
 
   themeConfig: {
-    logo: "/logo.jpg",
+    logo: "/logo.png",
     socialLinks: [
       { icon: "github", link: "https://github.com/dodok8/gaji" },
     ],

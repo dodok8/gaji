@@ -2081,7 +2081,7 @@ Found 3 existing workflow(s):
 - [ ] `docs/` 디렉토리 생성
 - [ ] `docs/package.json` 생성 (VitePress 의존성)
 - [ ] `docs/.vitepress/config.ts` 생성 (i18n: 영어 + 한국어)
-- [ ] `docs/public/logo.jpg` - 프로젝트 로고 배치 (사이트 로고/파비콘/Hero)
+- [ ] `docs/public/logo.png` - 프로젝트 로고 배치 (사이트 로고/파비콘/Hero)
 
 ### 9.2 영어 문서 (docs/en/)
 - [ ] `en/index.md` - 랜딩 페이지 (Hero + Features + 코드 비교)
