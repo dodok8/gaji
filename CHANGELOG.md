@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.8](https://github.com/dodok8/gaji/compare/v0.2.7...v0.2.8) - 2026-02-13
+
+### Fixed
+
+- use PAT for release-plz-pr job to fix branch creation
+
+### Other
+
+- update generated workflows
+- add community templates, guidelines, and update ROADMAP ([#29](https://github.com/dodok8/gaji/pull/29))
+
 ## [0.2.7](https://github.com/dodok8/gaji/compare/v0.2.6...v0.2.7) - 2026-02-13
 
 ### Added
