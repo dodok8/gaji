@@ -4,7 +4,7 @@ Type-safe GitHub Actions workflows in TypeScript
 
 ---
 
-## Current Status (v0.2.8)
+## Current Status (v0.3.0)
 
 gaji is a working CLI tool with all core features implemented. It is self-dogfooding (uses itself for its own CI/CD workflows) and has been released on both crates.io and npm.
 
@@ -19,6 +19,7 @@ gaji is a working CLI tool with all core features implemented. It is self-dogfoo
 - 95 tests (92 unit + 3 integration)
 - JavaScriptAction class for node-based GitHub Actions
 - npx support for running without installation
+- Build timing, progress bars, cache expiration policy
 
 ---
 
@@ -52,14 +53,10 @@ gaji is a working CLI tool with all core features implemented. It is self-dogfoo
 - VitePress site deployed at https://gaji.gaebalgom.work
 - Full English and Korean documentation (guide, reference, examples)
 
----
-
-## In Progress (v0.3.0)
-
-### Easy Wins — Polish & UX
-- [x] Execution time measurement for builds (`Instant` timer in build pipeline)
-- [x] Progress indicators with `indicatif` (action download, type generation)
-- [x] Cache expiration policy (enforce `is_expired()` with configurable TTL via `build.cache_ttl_days`)
+### Phase 10: Polish & UX (v0.3.0)
+- Execution time measurement for builds (`Instant` timer in build pipeline)
+- Progress indicators with `indicatif` (action download, type generation)
+- Cache expiration policy (enforce `is_expired()` with configurable TTL via `build.cache_ttl_days`)
 
 ---
 
@@ -72,9 +69,13 @@ gaji is a working CLI tool with all core features implemented. It is self-dogfoo
 - [ ] YAML lint rules and warnings (unnamed jobs, unknown fields)
 - [ ] Template literal support in `getAction()` calls
 - [ ] Respect `.gitignore` patterns when scanning
+- [ ] Docs: search, hover to show type
 
 ### Distribution
 - [ ] Shell completion scripts (bash, zsh, fish via clap)
+
+### Feature
+- [ ] Action migration (`action.yml` → TypeScript using CompositeAction/JavaScriptAction)
 
 ### Community
 - [x] GitHub issue templates (bug report, feature request)
@@ -97,6 +98,7 @@ gaji is a working CLI tool with all core features implemented. It is self-dogfoo
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| v0.3.0 | 2026-02-14 | Build timing, progress bars, cache expiration policy |
 | v0.2.8 | 2026-02-13 | npx support |
 | v0.2.7 | 2026-02-13 | JavaScriptAction class |
 | v0.2.6 | 2026-02-13 | Documentation site, expression escaping fix |
