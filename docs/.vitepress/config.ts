@@ -51,6 +51,10 @@ export default defineConfig({
                   text: "Composite Action",
                   link: "/examples/composite-action",
                 },
+                {
+                  text: "JavaScript Action",
+                  link: "/examples/javascript-action",
+                },
               ],
             },
           ],
@@ -102,6 +106,10 @@ export default defineConfig({
                 {
                   text: "컴포지트 액션",
                   link: "/ko/examples/composite-action",
+                },
+                {
+                  text: "JavaScript 액션",
+                  link: "/ko/examples/javascript-action",
                 },
               ],
             },
