@@ -1,5 +1,6 @@
-import { JavaScriptAction } from "../generated/index.js";
+import { CallAction, JavaScriptAction, Job, Workflow } from "../generated/index.js";
 
+// Define the JavaScript action
 const action = new JavaScriptAction(
   {
     name: "Hello World",
@@ -24,3 +25,29 @@ const action = new JavaScriptAction(
 );
 
 action.build("hello-world");
+
+// Use the action in a workflow
+const helloWorldJob = new Job("ubuntu-latest")
+  .addStep({
+    name: "Hello world action step",
+    id: "hello",
+    ...CallAction.from(action).toJSON(),
+    with: {
+      "who-to-greet": "Mona the Octocat",
+    },
+  })
+  .addStep({
+    name: "Get the output time",
+    run: 'echo "The time was ${{ steps.hello.outputs.time }}"',
+  });
+
+const workflow = new Workflow({
+  name: "Use JavaScript Action",
+  on: {
+    push: {
+      branches: ["main"],
+    },
+  },
+}).addJob("hello_world_job", helloWorldJob);
+
+workflow.build("use-js-action");

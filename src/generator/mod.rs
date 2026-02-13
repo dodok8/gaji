@@ -209,7 +209,7 @@ export declare class CallJob {
 
 export declare class CallAction {
     constructor(uses: string);
-    static from(action: CompositeAction): CallAction;
+    static from(action: CompositeAction | JavaScriptAction): CallAction;
     toJSON(): JobStep;
 }
 "#);
