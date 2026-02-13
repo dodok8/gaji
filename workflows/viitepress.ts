@@ -22,7 +22,7 @@ const deploy = new Job("ubuntu-latest")
 const workflow = new Workflow({
   name: "Deploy Docs",
   on: {
-    push: { branches: ["main"] },
+    push: { branches: ["main"], paths: ["docs/**"] },
     workflow_dispatch: {},
   },
 }).addJob("deploy", deploy);
