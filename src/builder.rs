@@ -158,16 +158,13 @@ impl WorkflowBuilder {
 
             // Determine output directory based on type
             let out_dir = if build_output.output_type == "action" {
-                let action_dir = self
-                    .output_dir
-                    .parent()
-                    .unwrap_or(Path::new("."))
-                    .join("actions")
-                    .join(&build_output.id);
+                let action_dir = self.output_dir.join("actions").join(&build_output.id);
                 fs::create_dir_all(&action_dir).await?;
                 action_dir
             } else {
-                self.output_dir.clone()
+                let workflows_dir = self.output_dir.join("workflows");
+                fs::create_dir_all(&workflows_dir).await?;
+                workflows_dir
             };
 
             // Determine output filename

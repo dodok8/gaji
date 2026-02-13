@@ -9,7 +9,7 @@ Create `.gaji.toml` in your project root:
 ```toml
 [project]
 workflows_dir = "workflows"
-output_dir = ".github/workflows"
+output_dir = ".github"
 generated_dir = "generated"
 
 [github]
@@ -20,7 +20,7 @@ api_url = "https://github.example.com"
 
 [watch]
 debounce_ms = 300
-ignored_patterns = ["node_modules", ".git", "dist"]
+ignored_patterns = ["node_modules", ".git", "generated"]
 
 [build]
 validate = true
@@ -36,7 +36,7 @@ Project-level settings:
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `workflows_dir` | string | `"workflows"` | Directory containing TypeScript workflows |
-| `output_dir` | string | `".github/workflows"` | Directory for generated YAML files |
+| `output_dir` | string | `".github"` | Base output directory (workflows go to `workflows/`, actions to `actions/`) |
 | `generated_dir` | string | `"generated"` | Directory for generated action types |
 
 **Example:**
@@ -44,7 +44,7 @@ Project-level settings:
 ```toml
 [project]
 workflows_dir = "gha"
-output_dir = ".github/workflows"
+output_dir = ".github"
 generated_dir = "gha-types"
 ```
 
@@ -84,7 +84,7 @@ File watching settings:
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `debounce_ms` | integer | `300` | Debounce delay in milliseconds |
-| `ignored_patterns` | array | `["node_modules", ".git"]` | Patterns to ignore during watch |
+| `ignored_patterns` | array | `["node_modules", ".git", "generated"]` | Patterns to ignore during watch |
 
 **Example:**
 
@@ -152,7 +152,7 @@ gaji uses a cache file (`.gaji-cache.json`) to avoid re-fetching action definiti
 To clear the cache:
 
 ```bash
-gaji clean
+gaji clean --cache
 ```
 
 ## Environment Variables

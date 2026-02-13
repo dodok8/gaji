@@ -60,6 +60,7 @@ gaji dev [OPTIONS]
 
 | Option | Description |
 |--------|-------------|
+| `-d, --dir <DIR>` | Directory to scan (default: `workflows`) |
 | `--watch` | Keep watching for changes after initial scan |
 
 **Examples:**
@@ -70,6 +71,9 @@ gaji dev
 
 # Watch mode (recommended for development)
 gaji dev --watch
+
+# Scan a custom directory
+gaji dev --dir src/workflows
 ```
 
 **What it does:**
@@ -98,8 +102,9 @@ gaji build [OPTIONS]
 
 | Option | Description |
 |--------|-------------|
-| `--validate` | Validate generated YAML (default: true) |
-| `--format` | Format generated YAML (default: true) |
+| `-i, --input <DIR>` | Input directory containing TypeScript workflows (default: `workflows`) |
+| `-o, --output <DIR>` | Output directory for YAML files (default: `.github`) |
+| `--dry-run` | Preview YAML output without writing files |
 
 **Examples:**
 
@@ -107,17 +112,24 @@ gaji build [OPTIONS]
 # Build all workflows
 gaji build
 
-# Build without validation
-gaji build --no-validate
+# Preview without writing
+gaji build --dry-run
+
+# Custom input/output directories
+gaji build --input src/workflows --output .github
 ```
+
+::: tip
+Validation and formatting options are configured via `.gaji.toml`, not CLI flags. See [Configuration](../guide/configuration.md).
+:::
 
 **What it does:**
 
 - Finds all `.ts` files in `workflows/`
-- Executes them with Node.js
+- Executes them with the built-in QuickJS engine (falls back to `npx tsx`)
 - Converts output to YAML
-- Validates YAML syntax
-- Writes to `.github/workflows/`
+- Writes workflows to `.github/workflows/`
+- Writes composite actions to `.github/actions/<name>/action.yml`
 
 ---
 
@@ -162,16 +174,32 @@ gaji add docker/setup-buildx-action@v3
 
 ### `gaji clean`
 
-Clean generated files and cache.
+Clean generated files and optionally clean cache.
 
 ```bash
+gaji clean [OPTIONS]
+```
+
+**Options:**
+
+| Option | Description |
+|--------|-------------|
+| `--cache` | Also clean cache |
+
+**Examples:**
+
+```bash
+# Clean generated files
 gaji clean
+
+# Also clean cache
+gaji clean --cache
 ```
 
 **What it does:**
 
 - Removes `generated/` directory
-- Removes `.gaji-cache.json`
+- With `--cache`: also removes `.gaji-cache.json`
 
 Use this when you want to regenerate all types from scratch.
 

@@ -280,20 +280,12 @@ const setupNode = getAction("actions/setup-node@v4");
 
 ## Updating Actions
 
-To update action types:
+To update action types, clear the cache and regenerate:
 
 ```bash
-# Clear cache
-gaji clean
-
-# Regenerate types
+# Clear cache and regenerate
+gaji clean --cache
 gaji dev
-```
-
-Or manually re-add:
-
-```bash
-gaji add actions/checkout@v4 --force
 ```
 
 ## Troubleshooting
