@@ -1,4 +1,0 @@
-[tools]
-deno = "latest"
-node = "lts"
-pnpm = "latest"
