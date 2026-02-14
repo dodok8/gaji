@@ -80,7 +80,7 @@ gaji is a working CLI tool with all core features implemented. It is self-dogfoo
 - [x] Shell completion scripts (bash, zsh, fish via clap)
 
 ### Feature
-- [ ] Action migration (`action.yml` → TypeScript using CompositeAction/JavaScriptAction)
+- [x] Action migration (`action.yml` → TypeScript using CompositeAction/JavaScriptAction)
 
 ### Community
 - [x] GitHub issue templates (bug report, feature request)
