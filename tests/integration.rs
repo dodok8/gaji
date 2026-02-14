@@ -45,7 +45,7 @@ fn test_executor_to_yaml_pipeline() {
     );
 
     let workflow_js = r#"
-var checkout = getAction("actions/checkout@v4");
+var checkout = getAction("actions/checkout@v5");
 var build = new Job("ubuntu-latest")
     .addStep(checkout({ name: "Checkout" }))
     .addStep({ name: "Test", run: "npm test" });
@@ -74,7 +74,7 @@ wf.build("integration-test");
     // Validate the YAML structure
     assert!(yaml_str.contains("name: Integration Test"));
     assert!(yaml_str.contains("runs-on: ubuntu-latest"));
-    assert!(yaml_str.contains("uses: actions/checkout@v4"));
+    assert!(yaml_str.contains("uses: actions/checkout@v5"));
     assert!(yaml_str.contains("run: npm test"));
 
     // Parse back as YAML and verify required fields
@@ -143,7 +143,7 @@ fn test_composite_job_inheritance() {
 
     // Simulate TypeScript compiled output: class DeployJob extends CompositeJob
     let workflow_js = r#"
-var checkout = getAction("actions/checkout@v4");
+var checkout = getAction("actions/checkout@v5");
 
 class DeployJob extends CompositeJob {
     constructor(environment) {
@@ -177,7 +177,7 @@ wf.build("deploy");
     let staging = &json_value["jobs"]["deploy-staging"];
     assert_eq!(staging["runs-on"], "ubuntu-latest");
     assert_eq!(staging["env"]["ENVIRONMENT"], "staging");
-    assert_eq!(staging["steps"][0]["uses"], "actions/checkout@v4");
+    assert_eq!(staging["steps"][0]["uses"], "actions/checkout@v5");
     assert_eq!(staging["steps"][1]["run"], "npm run deploy:staging");
 
     // Verify production job with needs

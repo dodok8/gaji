@@ -94,20 +94,20 @@ mod tests {
     #[test]
     fn test_simple_call() {
         let parser = TypeScriptParser::new();
-        let source = r#"const checkout = getAction("actions/checkout@v4")"#;
+        let source = r#"const checkout = getAction("actions/checkout@v5")"#;
         let refs = parser.extract_action_refs(source).unwrap();
-        assert!(refs.contains("actions/checkout@v4"));
+        assert!(refs.contains("actions/checkout@v5"));
     }
 
     #[test]
     fn test_multiple_calls() {
         let parser = TypeScriptParser::new();
         let source = r#"
-            const checkout = getAction("actions/checkout@v4")
+            const checkout = getAction("actions/checkout@v5")
             const setupNode = getAction("actions/setup-node@v4")
         "#;
         let refs = parser.extract_action_refs(source).unwrap();
-        assert!(refs.contains("actions/checkout@v4"));
+        assert!(refs.contains("actions/checkout@v5"));
         assert!(refs.contains("actions/setup-node@v4"));
         assert_eq!(refs.len(), 2);
     }
@@ -119,11 +119,11 @@ mod tests {
             const workflow = new Workflow()
                 .addJob(
                     new Job()
-                        .addStep(getAction("actions/checkout@v4")({ name: "Checkout" }))
+                        .addStep(getAction("actions/checkout@v5")({ name: "Checkout" }))
                 )
         "#;
         let refs = parser.extract_action_refs(source).unwrap();
-        assert!(refs.contains("actions/checkout@v4"));
+        assert!(refs.contains("actions/checkout@v5"));
     }
 
     #[test]
@@ -131,12 +131,12 @@ mod tests {
         let parser = TypeScriptParser::new();
         let source = r#"
             const actions = [
-                getAction("actions/checkout@v4"),
+                getAction("actions/checkout@v5"),
                 getAction("actions/setup-node@v4")
             ]
         "#;
         let refs = parser.extract_action_refs(source).unwrap();
-        assert!(refs.contains("actions/checkout@v4"));
+        assert!(refs.contains("actions/checkout@v5"));
         assert!(refs.contains("actions/setup-node@v4"));
     }
 
@@ -145,12 +145,12 @@ mod tests {
         let parser = TypeScriptParser::new();
         let source = r#"
             const actions = {
-                checkout: getAction("actions/checkout@v4"),
+                checkout: getAction("actions/checkout@v5"),
                 node: getAction("actions/setup-node@v4")
             }
         "#;
         let refs = parser.extract_action_refs(source).unwrap();
-        assert!(refs.contains("actions/checkout@v4"));
+        assert!(refs.contains("actions/checkout@v5"));
         assert!(refs.contains("actions/setup-node@v4"));
     }
 }

@@ -45,7 +45,7 @@ gaji init init
 사용하려는 GitHub Actions 추가:
 
 ```bash
-gaji init add actions/checkout@v4
+gaji init add actions/checkout@v5
 gaji init add actions/setup-node@v4
 ```
 
@@ -58,11 +58,13 @@ gaji init add actions/setup-node@v4
 
 `workflows/ci.ts` 생성:
 
-```typescript
+```ts twoslash
+// @filename: workflows/example.ts
+// ---cut---
 import { getAction, Job, Workflow } from "../generated/index.js";
 
 // 완전한 타입 안전성으로 액션 가져오기
-const checkout = getAction("actions/checkout@v4");
+const checkout = getAction("actions/checkout@v5");
 const setupNode = getAction("actions/setup-node@v4");
 
 // 빌드 작업 정의
@@ -141,7 +143,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 코드 체크아웃
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Node.js 설정
         uses: actions/setup-node@v4
         with:

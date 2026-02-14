@@ -1,7 +1,7 @@
 import { getAction, Job, Workflow } from "../../../generated/index.js";
 
 // Get actions with full type safety
-const checkout = getAction("actions/checkout@v4");
+const checkout = getAction("actions/checkout@v5");
 const setupNode = getAction("actions/setup-node@v4");
 
 // Define the CI job
@@ -9,7 +9,7 @@ const build = new Job("ubuntu-latest")
   .addStep(
     checkout({
       name: "Checkout code",
-    })
+    }),
   )
   .addStep(
     setupNode({
@@ -17,7 +17,7 @@ const build = new Job("ubuntu-latest")
       with: {
         "node-version": "20",
       },
-    })
+    }),
   )
   .addStep({
     name: "Install pnpm",

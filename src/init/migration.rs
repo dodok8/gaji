@@ -284,7 +284,7 @@ pub fn extract_actions_from_yaml(workflow: &serde_yaml::Value) -> Vec<String> {
 }
 
 /// Convert action ref to a camelCase variable name.
-/// "actions/checkout@v4" -> "checkout"
+/// "actions/checkout@v5" -> "checkout"
 /// "actions/setup-node@v4" -> "setupNode"
 /// "actions/cache@v3" -> "cache"
 pub fn action_to_var_name(action: &str) -> String {
@@ -411,7 +411,7 @@ mod tests {
 
     #[test]
     fn test_action_to_var_name() {
-        assert_eq!(action_to_var_name("actions/checkout@v4"), "checkout");
+        assert_eq!(action_to_var_name("actions/checkout@v5"), "checkout");
         assert_eq!(action_to_var_name("actions/setup-node@v4"), "setupNode");
         assert_eq!(
             action_to_var_name("codecov/codecov-action@v3"),
@@ -434,7 +434,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions/setup-node@v4
       - name: Test
         run: npm test
@@ -444,7 +444,7 @@ jobs:
         let actions = extract_actions_from_yaml(&yaml);
         assert_eq!(
             actions,
-            vec!["actions/checkout@v4", "actions/setup-node@v4"]
+            vec!["actions/checkout@v5", "actions/setup-node@v4"]
         );
     }
 
@@ -459,14 +459,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Test
         run: npm test
 "#;
         let ts = generate_typescript_from_yaml(yaml_content, "ci").unwrap();
 
         assert!(ts.contains("import { getAction, Job, Workflow }"));
-        assert!(ts.contains(r#"getAction("actions/checkout@v4")"#));
+        assert!(ts.contains(r#"getAction("actions/checkout@v5")"#));
         assert!(ts.contains("new Job("));
         assert!(ts.contains("new Workflow("));
         assert!(ts.contains(r#"workflow.build("ci")"#));

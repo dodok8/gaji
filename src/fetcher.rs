@@ -51,7 +51,7 @@ pub struct ActionRef {
 impl ActionRef {
     pub fn parse(action_ref: &str) -> Result<Self> {
         // Parse formats like:
-        // - actions/checkout@v4
+        // - actions/checkout@v5
         // - owner/repo@tag
         // - owner/repo/path@ref
 
@@ -296,10 +296,10 @@ mod tests {
 
     #[test]
     fn test_parse_simple_action_ref() {
-        let action_ref = ActionRef::parse("actions/checkout@v4").unwrap();
+        let action_ref = ActionRef::parse("actions/checkout@v5").unwrap();
         assert_eq!(action_ref.owner, "actions");
         assert_eq!(action_ref.repo, "checkout");
-        assert_eq!(action_ref.ref_, "v4");
+        assert_eq!(action_ref.ref_, "v5");
         assert!(action_ref.path.is_none());
     }
 
@@ -314,10 +314,10 @@ mod tests {
 
     #[test]
     fn test_raw_url_generation() {
-        let action_ref = ActionRef::parse("actions/checkout@v4").unwrap();
+        let action_ref = ActionRef::parse("actions/checkout@v5").unwrap();
         assert_eq!(
             action_ref.to_raw_url(),
-            "https://raw.githubusercontent.com/actions/checkout/v4/action.yml"
+            "https://raw.githubusercontent.com/actions/checkout/v5/action.yml"
         );
     }
 

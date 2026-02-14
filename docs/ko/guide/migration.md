@@ -33,7 +33,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -44,7 +44,7 @@ jobs:
 ### 2단계: 필요한 액션 추가
 
 ```bash
-gaji add actions/checkout@v4
+gaji add actions/checkout@v5
 gaji add actions/setup-node@v4
 ```
 
@@ -52,10 +52,12 @@ gaji add actions/setup-node@v4
 
 `workflows/ci.ts` 생성:
 
-```typescript
+```ts twoslash
+// @filename: workflows/example.ts
+// ---cut---
 import { getAction, Job, Workflow } from "../generated/index.js";
 
-const checkout = getAction("actions/checkout@v4");
+const checkout = getAction("actions/checkout@v5");
 const setupNode = getAction("actions/setup-node@v4");
 
 const build = new Job("ubuntu-latest")

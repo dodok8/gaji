@@ -1,4 +1,20 @@
+import { transformerTwoslash } from "@shikijs/vitepress-twoslash";
+import fs from "node:fs";
+import { fileURLToPath } from "node:url";
+import path from "node:path";
 import { defineConfig } from "vitepress";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const generatedDir = path.resolve(__dirname, "../../generated");
+const extraFiles: Record<string, string> = {};
+for (const file of fs.readdirSync(generatedDir)) {
+  if (file.endsWith(".d.ts")) {
+    extraFiles[`generated/${file}`] = fs.readFileSync(
+      path.join(generatedDir, file),
+      "utf-8",
+    );
+  }
+}
 
 export default defineConfig({
   title: "gaji",
@@ -7,6 +23,20 @@ export default defineConfig({
   head: [
     ["link", { rel: "icon", href: "/logo.png" }],
   ],
+
+  markdown: {
+    codeTransformers: [
+      transformerTwoslash({
+        twoslashOptions: {
+          compilerOptions: {
+            module: 99, // ESNext
+            moduleResolution: 100, // Bundler
+          },
+          extraFiles,
+        },
+      }),
+    ],
+  },
 
   locales: {
     root: {
@@ -128,5 +158,6 @@ export default defineConfig({
       message: "Released under the MIT License.",
       copyright: "Copyright © 2026-present",
     },
+    search: { provider: "local" },
   },
 });

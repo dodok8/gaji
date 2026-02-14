@@ -7,7 +7,7 @@ How to use GitHub Actions with gaji.
 To use an action in your workflows, first add it:
 
 ```bash
-gaji add actions/checkout@v4
+gaji add actions/checkout@v5
 ```
 
 This fetches the action's `action.yml` and generates TypeScript types.
@@ -16,10 +16,12 @@ This fetches the action's `action.yml` and generates TypeScript types.
 
 Import and use actions with `getAction()`:
 
-```typescript
-import { getAction } from "../generated/index.js";
+```ts twoslash
+// @filename: workflows/example.ts
+// ---cut---
+import { getAction, Job } from "../generated/index.js";
 
-const checkout = getAction("actions/checkout@v4");
+const checkout = getAction("actions/checkout@v5");
 const setupNode = getAction("actions/setup-node@v4");
 
 // Use in workflow
@@ -41,7 +43,7 @@ owner/repo@version
 ```
 
 Examples:
-- `actions/checkout@v4`
+- `actions/checkout@v5`
 - `actions/setup-node@v4`
 - `docker/setup-buildx-action@v3`
 - `softprops/action-gh-release@v1`
@@ -113,11 +115,11 @@ setupNode({
 Checkout your repository:
 
 ```bash
-gaji add actions/checkout@v4
+gaji add actions/checkout@v5
 ```
 
 ```typescript
-const checkout = getAction("actions/checkout@v4");
+const checkout = getAction("actions/checkout@v5");
 
 // Basic usage
 .addStep(checkout({}))
@@ -295,7 +297,7 @@ gaji dev
 Make sure you've added the action:
 
 ```bash
-gaji add actions/checkout@v4
+gaji add actions/checkout@v5
 gaji dev
 ```
 
