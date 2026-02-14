@@ -151,6 +151,7 @@ cargo test module_name::
 | `reqwest` | HTTP client for GitHub API |
 | `serde_yaml` / `serde_json` | Serialization |
 | `notify` | Filesystem watching |
+| `ignore` | Gitignore-aware file filtering |
 | `colored` | Terminal colors |
 | `indicatif` | Progress bars |
 | `dialoguer` | Interactive terminal prompts |
