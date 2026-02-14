@@ -520,7 +520,7 @@ mod tests {
         create_example_workflow(temp.path()).await.unwrap();
         let content = std::fs::read_to_string(temp.path().join("workflows/ci.ts")).unwrap();
         assert!(content.contains("getAction"));
-        assert!(content.contains("actions/checkout@v4"));
+        assert!(content.contains("actions/checkout@v5"));
         assert!(content.contains("workflow.build"));
     }
 

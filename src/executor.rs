@@ -246,7 +246,7 @@ export type { Foo };
         let workflow_js = r#"
 import { getAction, Job, Workflow } from "../../generated/index.js";
 
-const checkout = getAction("actions/checkout@v4");
+const checkout = getAction("actions/checkout@v5");
 
 const build = new Job("ubuntu-latest")
     .addStep(checkout({ name: "Checkout", with: { "fetch-depth": 1 } }))
@@ -278,7 +278,7 @@ wf.build("ci");
 
         let steps = json["jobs"]["build"]["steps"].as_array().unwrap();
         assert_eq!(steps.len(), 2);
-        assert_eq!(steps[0]["uses"], "actions/checkout@v4");
+        assert_eq!(steps[0]["uses"], "actions/checkout@v5");
         assert_eq!(steps[0]["name"], "Checkout");
         assert_eq!(steps[1]["run"], "npm test");
     }

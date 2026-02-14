@@ -2,3 +2,8 @@ node_modules/
 dist/
 generated/
 .gaji-cache.json
+
+# gaji generated files
+generated/
+.gaji-cache.json
+.gaji.local.toml

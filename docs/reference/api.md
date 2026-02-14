@@ -169,8 +169,13 @@ interface CompositeActionConfig {
 
 #### Example
 
-```typescript
-import { CompositeAction } from "../generated/index.js";
+```ts twoslash
+// @filename: workflows/example.ts
+// ---cut---
+import { CompositeAction, getAction } from "../generated/index.js";
+
+const checkout = getAction("actions/checkout@v5");
+const setupNode = getAction("actions/setup-node@v4");
 
 const setupEnv = new CompositeAction({
   name: "Setup Environment",
@@ -249,7 +254,9 @@ interface JavaScriptActionRuns {
 
 #### Example
 
-```typescript
+```ts twoslash
+// @filename: workflows/example.ts
+// ---cut---
 import { JavaScriptAction } from "../generated/index.js";
 
 const action = new JavaScriptAction(
@@ -310,8 +317,13 @@ Use `Job` directly for one-off jobs. Use `CompositeJob` when you want to create 
 
 #### Example
 
-```typescript
-import { CompositeJob } from "../generated/index.js";
+```ts twoslash
+// @filename: workflows/example.ts
+// ---cut---
+import { CompositeJob, getAction, Workflow } from "../generated/index.js";
+
+const checkout = getAction("actions/checkout@v5");
+const setupNode = getAction("actions/setup-node@v4");
 
 // Define a reusable job template
 class NodeTestJob extends CompositeJob {
@@ -403,7 +415,9 @@ class CallJob {
 
 #### Example
 
-```typescript
+```ts twoslash
+// @filename: workflows/example.ts
+// ---cut---
 import { CallJob, Workflow } from "../generated/index.js";
 
 const deploy = new CallJob("octo-org/deploy/.github/workflows/deploy.yml@main")
@@ -453,7 +467,9 @@ class CallAction {
 
 #### Example
 
-```typescript
+```ts twoslash
+// @filename: workflows/example.ts
+// ---cut---
 import { CompositeAction, CallAction, Job } from "../generated/index.js";
 
 const setupEnv = new CompositeAction({
@@ -486,7 +502,7 @@ function getAction<T extends string>(
 #### Example
 
 ```typescript
-const checkout = getAction("actions/checkout@v4");
+const checkout = getAction("actions/checkout@v5");
 const setupNode = getAction("actions/setup-node@v4");
 
 // Use with full type safety
@@ -594,10 +610,12 @@ interface ActionOutput {
 
 ### Complete Workflow
 
-```typescript
+```ts twoslash
+// @filename: workflows/example.ts
+// ---cut---
 import { getAction, Job, Workflow } from "../generated/index.js";
 
-const checkout = getAction("actions/checkout@v4");
+const checkout = getAction("actions/checkout@v5");
 const setupNode = getAction("actions/setup-node@v4");
 
 const test = new Job("ubuntu-latest")

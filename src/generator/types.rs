@@ -178,7 +178,7 @@ mod tests {
             runs: None,
         };
 
-        let result = generate_type_definition("actions/checkout@v4", &metadata);
+        let result = generate_type_definition("actions/checkout@v5", &metadata);
 
         assert!(result.contains("ActionsCheckoutV4Inputs"));
         assert!(result.contains("repository?:"));

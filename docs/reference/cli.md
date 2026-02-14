@@ -145,13 +145,13 @@ gaji add <ACTION_REF>
 
 | Argument | Description |
 |----------|-------------|
-| `<ACTION_REF>` | GitHub action reference (e.g., `actions/checkout@v4`) |
+| `<ACTION_REF>` | GitHub action reference (e.g., `actions/checkout@v5`) |
 
 **Examples:**
 
 ```bash
 # Add common actions
-gaji add actions/checkout@v4
+gaji add actions/checkout@v5
 gaji add actions/setup-node@v4
 gaji add actions/cache@v4
 
@@ -239,7 +239,7 @@ npm install -D gaji
 gaji init
 
 # Add actions
-gaji add actions/checkout@v4
+gaji add actions/checkout@v5
 gaji add actions/setup-node@v4
 
 # Generate types
@@ -305,7 +305,7 @@ Make sure the action reference is correct:
 
 ```bash
 # ✅ Correct
-gaji add actions/checkout@v4
+gaji add actions/checkout@v5
 
 # ❌ Wrong
 gaji add checkout  # Missing owner and version
@@ -325,7 +325,7 @@ export HTTPS_PROXY=http://proxy.example.com:8080
 Make sure you've run `gaji dev` after adding actions:
 
 ```bash
-gaji add actions/checkout@v4
+gaji add actions/checkout@v5
 gaji dev  # Don't forget this!
 ```
 

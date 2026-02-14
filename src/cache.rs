@@ -165,7 +165,7 @@ mod tests {
             data,
             cache_file: PathBuf::from(".test-cache.json"),
         };
-        assert!(cache.should_regenerate("actions/checkout@v4", "somehash"));
+        assert!(cache.should_regenerate("actions/checkout@v5", "somehash"));
     }
 
     #[test]
@@ -173,9 +173,9 @@ mod tests {
         let hash = calculate_hash("content");
         let mut entries = HashMap::new();
         entries.insert(
-            "actions/checkout@v4".to_string(),
+            "actions/checkout@v5".to_string(),
             CacheEntry {
-                action_ref: "actions/checkout@v4".to_string(),
+                action_ref: "actions/checkout@v5".to_string(),
                 content_hash: hash.clone(),
                 generated_at: 0,
                 metadata: ActionMetadata {
@@ -194,16 +194,16 @@ mod tests {
             },
             cache_file: PathBuf::from(".test-cache.json"),
         };
-        assert!(!cache.should_regenerate("actions/checkout@v4", &hash));
+        assert!(!cache.should_regenerate("actions/checkout@v5", &hash));
     }
 
     #[test]
     fn test_should_regenerate_different_hash() {
         let mut entries = HashMap::new();
         entries.insert(
-            "actions/checkout@v4".to_string(),
+            "actions/checkout@v5".to_string(),
             CacheEntry {
-                action_ref: "actions/checkout@v4".to_string(),
+                action_ref: "actions/checkout@v5".to_string(),
                 content_hash: "oldhash".to_string(),
                 generated_at: 0,
                 metadata: ActionMetadata {
@@ -222,7 +222,7 @@ mod tests {
             },
             cache_file: PathBuf::from(".test-cache.json"),
         };
-        assert!(cache.should_regenerate("actions/checkout@v4", "newhash"));
+        assert!(cache.should_regenerate("actions/checkout@v5", "newhash"));
     }
 
     #[test]
@@ -279,9 +279,9 @@ mod tests {
             .as_secs();
         let mut entries = HashMap::new();
         entries.insert(
-            "actions/checkout@v4".to_string(),
+            "actions/checkout@v5".to_string(),
             CacheEntry {
-                action_ref: "actions/checkout@v4".to_string(),
+                action_ref: "actions/checkout@v5".to_string(),
                 content_hash: "hash".to_string(),
                 generated_at: now,
                 metadata: ActionMetadata {
@@ -300,7 +300,7 @@ mod tests {
             },
             cache_file: PathBuf::from(".test-cache.json"),
         };
-        assert!(!cache.is_expired("actions/checkout@v4", 30));
+        assert!(!cache.is_expired("actions/checkout@v5", 30));
     }
 
     #[test]
@@ -313,9 +313,9 @@ mod tests {
         let old_time = now - (31 * 24 * 60 * 60);
         let mut entries = HashMap::new();
         entries.insert(
-            "actions/checkout@v4".to_string(),
+            "actions/checkout@v5".to_string(),
             CacheEntry {
-                action_ref: "actions/checkout@v4".to_string(),
+                action_ref: "actions/checkout@v5".to_string(),
                 content_hash: "hash".to_string(),
                 generated_at: old_time,
                 metadata: ActionMetadata {
@@ -334,6 +334,6 @@ mod tests {
             },
             cache_file: PathBuf::from(".test-cache.json"),
         };
-        assert!(cache.is_expired("actions/checkout@v4", 30));
+        assert!(cache.is_expired("actions/checkout@v5", 30));
     }
 }

@@ -207,7 +207,7 @@ export declare class CompositeJob extends Job {
 
 export declare class Workflow {
     constructor(config: WorkflowConfig);
-    addJob(id: string, job: Job | CompositeJob): this;
+    addJob(id: string, job: Job | CompositeJob | CallJob): this;
     static fromObject(def: WorkflowDefinition, id?: string): Workflow;
     toJSON(): WorkflowDefinition;
     build(id?: string): void;
@@ -317,7 +317,7 @@ pub fn action_ref_to_filename(action_ref: &str) -> String {
 }
 
 pub fn action_ref_to_interface_name(action_ref: &str) -> String {
-    // "actions/checkout@v4" -> "ActionsCheckoutV4"
+    // "actions/checkout@v5" -> "ActionsCheckoutV4"
     action_ref
         .split(['/', '@', '-', '.'])
         .filter(|s| !s.is_empty())
@@ -350,7 +350,7 @@ mod tests {
     #[test]
     fn test_action_ref_to_filename() {
         assert_eq!(
-            action_ref_to_filename("actions/checkout@v4"),
+            action_ref_to_filename("actions/checkout@v5"),
             "actions-checkout-v4.d.ts"
         );
         assert_eq!(
@@ -362,7 +362,7 @@ mod tests {
     #[test]
     fn test_action_ref_to_interface_name() {
         assert_eq!(
-            action_ref_to_interface_name("actions/checkout@v4"),
+            action_ref_to_interface_name("actions/checkout@v5"),
             "ActionsCheckoutV4"
         );
         assert_eq!(

@@ -33,7 +33,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -44,7 +44,7 @@ jobs:
 ### Step 2: Add Required Actions
 
 ```bash
-gaji add actions/checkout@v4
+gaji add actions/checkout@v5
 gaji add actions/setup-node@v4
 ```
 
@@ -52,11 +52,13 @@ gaji add actions/setup-node@v4
 
 Create `workflows/ci.ts`:
 
-```typescript
+```ts twoslash
+// @filename: workflows/example.ts
+// ---cut---
 import { getAction, Job, Workflow } from "../generated/index.js";
 
 // Import actions
-const checkout = getAction("actions/checkout@v4");
+const checkout = getAction("actions/checkout@v5");
 const setupNode = getAction("actions/setup-node@v4");
 
 // Create job
@@ -281,7 +283,7 @@ During migration, you can keep both YAML and TypeScript versions:
 Make sure you've added all actions:
 
 ```bash
-gaji add actions/checkout@v4
+gaji add actions/checkout@v5
 gaji dev
 ```
 

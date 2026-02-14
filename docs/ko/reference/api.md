@@ -169,7 +169,10 @@ interface CompositeActionConfig {
 
 #### 예제
 
-```typescript
+```ts twoslash
+// @noErrors
+// @filename: workflows/example.ts
+// ---cut---
 import { CompositeAction } from "../generated/index.js";
 
 const setupEnv = new CompositeAction({
@@ -249,7 +252,9 @@ interface JavaScriptActionRuns {
 
 #### 예제
 
-```typescript
+```ts twoslash
+// @filename: workflows/example.ts
+// ---cut---
 import { JavaScriptAction } from "../generated/index.js";
 
 const action = new JavaScriptAction(
@@ -310,7 +315,10 @@ class CompositeJob extends Job {
 
 #### 예제
 
-```typescript
+```ts twoslash
+// @noErrors
+// @filename: workflows/example.ts
+// ---cut---
 import { CompositeJob } from "../generated/index.js";
 
 // 재사용 가능한 작업 템플릿 정의
@@ -401,7 +409,9 @@ class CallJob {
 
 #### 예제
 
-```typescript
+```ts twoslash
+// @filename: workflows/example.ts
+// ---cut---
 import { CallJob, Workflow } from "../generated/index.js";
 
 const deploy = new CallJob("octo-org/deploy/.github/workflows/deploy.yml@main")
@@ -451,7 +461,9 @@ class CallAction {
 
 #### 예제
 
-```typescript
+```ts twoslash
+// @filename: workflows/example.ts
+// ---cut---
 import { CompositeAction, CallAction, Job } from "../generated/index.js";
 
 const setupEnv = new CompositeAction({
@@ -484,7 +496,7 @@ function getAction<T extends string>(
 #### 예제
 
 ```typescript
-const checkout = getAction("actions/checkout@v4");
+const checkout = getAction("actions/checkout@v5");
 const setupNode = getAction("actions/setup-node@v4");
 
 // 완전한 타입 안전성으로 사용
@@ -595,7 +607,7 @@ interface ActionOutput {
 ```typescript
 import { getAction, Job, Workflow } from "../generated/index.js";
 
-const checkout = getAction("actions/checkout@v4");
+const checkout = getAction("actions/checkout@v5");
 const setupNode = getAction("actions/setup-node@v4");
 
 const test = new Job("ubuntu-latest")

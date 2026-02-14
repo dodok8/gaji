@@ -98,7 +98,7 @@ The core pipeline is: **TypeScript → Parse → Execute → YAML**
 - **Types/Structs**: `PascalCase` (e.g., `WorkflowBuilder`, `TypeGenerator`)
 - **Functions/Methods**: `snake_case` (e.g., `extract_action_refs`, `build_all`)
 - **Constants**: `UPPER_SNAKE_CASE` (e.g., `CACHE_FILE`, `CONFIG_FILE`)
-- **Action references**: `owner/repo@version` format (e.g., `actions/checkout@v4`)
+- **Action references**: `owner/repo@version` format (e.g., `actions/checkout@v5`)
 - **Tests**: Inline with `#[cfg(test)]` blocks in each module
 - **CLI output**: Uses `colored` crate for colored terminal output with emoji prefixes
 

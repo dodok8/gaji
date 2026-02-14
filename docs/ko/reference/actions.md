@@ -7,7 +7,7 @@ gaji와 함께 GitHub Actions를 사용하는 방법입니다.
 워크플로우에서 액션을 사용하려면 먼저 추가하세요:
 
 ```bash
-gaji add actions/checkout@v4
+gaji add actions/checkout@v5
 ```
 
 이것은 액션의 `action.yml`을 가져와 TypeScript 타입을 생성합니다.
@@ -19,7 +19,7 @@ gaji add actions/checkout@v4
 ```typescript
 import { getAction } from "../generated/index.js";
 
-const checkout = getAction("actions/checkout@v4");
+const checkout = getAction("actions/checkout@v5");
 const setupNode = getAction("actions/setup-node@v4");
 
 // 워크플로우에서 사용
@@ -41,7 +41,7 @@ owner/repo@version
 ```
 
 예시:
-- `actions/checkout@v4`
+- `actions/checkout@v5`
 - `actions/setup-node@v4`
 - `docker/setup-buildx-action@v3`
 - `softprops/action-gh-release@v1`
@@ -113,11 +113,11 @@ setupNode({
 저장소 체크아웃:
 
 ```bash
-gaji add actions/checkout@v4
+gaji add actions/checkout@v5
 ```
 
 ```typescript
-const checkout = getAction("actions/checkout@v4");
+const checkout = getAction("actions/checkout@v5");
 
 // 기본 사용
 .addStep(checkout({}))
@@ -295,7 +295,7 @@ gaji dev
 액션을 추가했는지 확인하세요:
 
 ```bash
-gaji add actions/checkout@v4
+gaji add actions/checkout@v5
 gaji dev
 ```
 

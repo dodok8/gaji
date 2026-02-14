@@ -59,7 +59,7 @@ pub enum Commands {
 
     /// Add a new action and generate types
     Add {
-        /// Action reference (e.g., actions/checkout@v4)
+        /// Action reference (e.g., actions/checkout@v5)
         action: String,
     },
 
