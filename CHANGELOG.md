@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.3](https://github.com/dodok8/gaji/compare/v0.4.2...v0.4.3) - 2026-02-14
+
+### Added
+
+- action migration (action.yml → TypeScript) ([#45](https://github.com/dodok8/gaji/pull/45))
+
 ## [0.4.2](https://github.com/dodok8/gaji/compare/v0.4.1...v0.4.2) - 2026-02-14
 
 ### Added
