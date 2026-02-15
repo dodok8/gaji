@@ -90,7 +90,7 @@ async fn cmd_dev(dir: &str, watch: bool) -> Result<()> {
 
             let gen_start = Instant::now();
             let cache = Cache::load_or_create()?;
-            let generator = TypeGenerator::with_cache_ttl(
+            let mut generator = TypeGenerator::with_cache_ttl(
                 cache,
                 PathBuf::from("generated"),
                 token,
@@ -154,7 +154,7 @@ async fn cmd_add(action: &str) -> Result<()> {
     let api_url = config.resolve_api_url();
 
     let cache = Cache::load_or_create()?;
-    let generator = TypeGenerator::with_cache_ttl(
+    let mut generator = TypeGenerator::with_cache_ttl(
         cache,
         PathBuf::from("generated"),
         token,
@@ -196,7 +196,7 @@ async fn cmd_clean(clean_cache: bool) -> Result<()> {
 
     // Optionally clean cache
     if clean_cache {
-        let cache = Cache::load_or_create()?;
+        let mut cache = Cache::load_or_create()?;
         cache.clear()?;
         println!("{} Cleared cache", "✓".green());
     }

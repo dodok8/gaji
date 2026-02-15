@@ -53,20 +53,19 @@ impl Cache {
     }
 
     pub fn set(
-        &self,
+        &mut self,
         action_ref: &str,
         metadata: &ActionMetadata,
         yaml_content: &str,
     ) -> Result<()> {
-        let mut data = self.data.clone();
-
         let content_hash = calculate_hash(yaml_content);
         let generated_at = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
             .as_secs();
 
-        data.entries.insert(
+        let mut new_data = self.data.clone();
+        new_data.entries.insert(
             action_ref.to_string(),
             CacheEntry {
                 action_ref: action_ref.to_string(),
@@ -76,9 +75,10 @@ impl Cache {
             },
         );
 
-        let json = serde_json::to_string_pretty(&data)?;
+        let json = serde_json::to_string_pretty(&new_data)?;
         std::fs::write(&self.cache_file, json)?;
 
+        self.data = new_data;
         Ok(())
     }
 
@@ -89,20 +89,22 @@ impl Cache {
         }
     }
 
-    pub fn clear(&self) -> Result<()> {
+    pub fn clear(&mut self) -> Result<()> {
         if self.cache_file.exists() {
             std::fs::remove_file(&self.cache_file)?;
         }
+        self.data.entries.clear();
         Ok(())
     }
 
-    pub fn remove(&self, action_ref: &str) -> Result<()> {
-        let mut data = self.data.clone();
-        data.entries.remove(action_ref);
+    pub fn remove(&mut self, action_ref: &str) -> Result<()> {
+        let mut new_data = self.data.clone();
+        new_data.entries.remove(action_ref);
 
-        let json = serde_json::to_string_pretty(&data)?;
+        let json = serde_json::to_string_pretty(&new_data)?;
         std::fs::write(&self.cache_file, json)?;
 
+        self.data = new_data;
         Ok(())
     }
 
@@ -230,7 +232,7 @@ mod tests {
         let dir = tempfile::TempDir::new().unwrap();
         let cache_file = dir.path().join("cache.json");
 
-        let cache = Cache {
+        let mut cache = Cache {
             data: CacheData {
                 version: 1,
                 entries: HashMap::new(),
@@ -301,6 +303,72 @@ mod tests {
             cache_file: PathBuf::from(".test-cache.json"),
         };
         assert!(!cache.is_expired("actions/checkout@v4", 30));
+    }
+
+    #[test]
+    fn test_cache_set_visible_immediately_in_same_process() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let cache_file = dir.path().join("cache.json");
+
+        let mut cache = Cache {
+            data: CacheData {
+                version: 1,
+                entries: HashMap::new(),
+            },
+            cache_file,
+        };
+
+        let metadata = ActionMetadata {
+            name: "Checkout".to_string(),
+            description: None,
+            inputs: None,
+            outputs: None,
+            runs: None,
+        };
+
+        cache
+            .set("actions/checkout@v4", &metadata, "yaml content")
+            .unwrap();
+
+        // In-memory state should reflect the write immediately
+        let result = cache.get("actions/checkout@v4");
+        assert!(
+            result.is_some(),
+            "get() should return the entry set in the same process"
+        );
+    }
+
+    #[test]
+    fn test_cache_remove_visible_immediately_in_same_process() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let cache_file = dir.path().join("cache.json");
+
+        let mut cache = Cache {
+            data: CacheData {
+                version: 1,
+                entries: HashMap::new(),
+            },
+            cache_file,
+        };
+
+        let metadata = ActionMetadata {
+            name: "Checkout".to_string(),
+            description: None,
+            inputs: None,
+            outputs: None,
+            runs: None,
+        };
+
+        cache
+            .set("actions/checkout@v4", &metadata, "yaml content")
+            .unwrap();
+        assert!(cache.get("actions/checkout@v4").is_some());
+
+        cache.remove("actions/checkout@v4").unwrap();
+        assert!(
+            cache.get("actions/checkout@v4").is_none(),
+            "get() should return None after remove in the same process"
+        );
     }
 
     #[test]
