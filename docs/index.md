@@ -68,7 +68,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: actions/setup-node@v4
         with:
@@ -81,10 +81,12 @@ jobs:
 
 ### After (TypeScript with gaji)
 
-```typescript
+```ts twoslash
+// @filename: workflows/example.ts
+// ---cut---
 import { getAction, Job, Workflow } from "../generated/index.js";
 
-const checkout = getAction("actions/checkout@v4");
+const checkout = getAction("actions/checkout@v5");
 const setupNode = getAction("actions/setup-node@v4");
 
 const build = new Job("ubuntu-latest")
@@ -129,7 +131,7 @@ gaji bundles QuickJS internally, so you don't need Node.js or any external JavaS
 gaji init
 
 # Add actions
-gaji add actions/checkout@v4
+gaji add actions/checkout@v5
 gaji add actions/setup-node@v4
 
 # Generate types

@@ -65,12 +65,8 @@ gaji is a working CLI tool with all core features implemented. It is self-dogfoo
 ## Remaining Work
 
 ### Polish & Quality
-- [ ] Parallel action.yml downloads (futures::stream::buffer_unordered)
-- [ ] Memory/LRU cache for action metadata
-- [ ] Better error messages with suggestions ("Did you mean...?")
-- [ ] YAML lint rules and warnings (unnamed jobs, unknown fields)
-- [ ] Template literal support in `getAction()` calls
-- [ ] Respect `.gitignore` patterns when scanning
+- [x] Parallel action.yml downloads (futures::stream::buffer_unordered)
+- [x] Better error messages with suggestions ("Did you mean...?")
 
 ### Documentation Gaps (implemented but undocumented)
 - [x] Document `CallJob` class (reusable workflow calls via `uses`)
@@ -78,13 +74,13 @@ gaji is a working CLI tool with all core features implemented. It is self-dogfoo
 - [x] Document `Workflow.fromObject()` static method
 - [x] Document `Job` constructor optional `options` parameter
 - [x] Document `CompositeJob` class in guide/examples
-- [ ] Docs: search, hover to show type
+- [x] Docs: search, hover to show type
 
 ### Distribution
-- [ ] Shell completion scripts (bash, zsh, fish via clap)
+- [x] Shell completion scripts (bash, zsh, fish via clap)
 
 ### Feature
-- [ ] Action migration (`action.yml` → TypeScript using CompositeAction/JavaScriptAction)
+- [x] Action migration (`action.yml` → TypeScript using CompositeAction/JavaScriptAction)
 
 ### Community
 - [x] GitHub issue templates (bug report, feature request)

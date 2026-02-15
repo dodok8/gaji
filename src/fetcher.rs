@@ -1,6 +1,7 @@
 use anyhow::{Context, Result};
+use futures::stream::{self, StreamExt};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::time::Duration;
 
 use crate::cache::Cache;
@@ -51,7 +52,7 @@ pub struct ActionRef {
 impl ActionRef {
     pub fn parse(action_ref: &str) -> Result<Self> {
         // Parse formats like:
-        // - actions/checkout@v4
+        // - actions/checkout@v5
         // - owner/repo@tag
         // - owner/repo/path@ref
 
@@ -204,6 +205,22 @@ impl GitHubFetcher {
         Ok(metadata)
     }
 
+    /// Fetch multiple action metadata in parallel with concurrency limit
+    pub async fn fetch_action_metadata_batch(
+        &self,
+        action_refs: &HashSet<String>,
+        concurrency: usize,
+    ) -> Vec<(String, Result<ActionMetadata>)> {
+        stream::iter(action_refs.iter())
+            .map(|action_ref| async move {
+                let result = self.fetch_action_metadata(action_ref).await;
+                (action_ref.clone(), result)
+            })
+            .buffer_unordered(concurrency)
+            .collect()
+            .await
+    }
+
     async fn fetch_action_yaml(&self, action_ref: &ActionRef) -> Result<String> {
         let api_url = self.api_url.as_deref();
 
@@ -296,10 +313,10 @@ mod tests {
 
     #[test]
     fn test_parse_simple_action_ref() {
-        let action_ref = ActionRef::parse("actions/checkout@v4").unwrap();
+        let action_ref = ActionRef::parse("actions/checkout@v5").unwrap();
         assert_eq!(action_ref.owner, "actions");
         assert_eq!(action_ref.repo, "checkout");
-        assert_eq!(action_ref.ref_, "v4");
+        assert_eq!(action_ref.ref_, "v5");
         assert!(action_ref.path.is_none());
     }
 
@@ -314,10 +331,10 @@ mod tests {
 
     #[test]
     fn test_raw_url_generation() {
-        let action_ref = ActionRef::parse("actions/checkout@v4").unwrap();
+        let action_ref = ActionRef::parse("actions/checkout@v5").unwrap();
         assert_eq!(
             action_ref.to_raw_url(),
-            "https://raw.githubusercontent.com/actions/checkout/v4/action.yml"
+            "https://raw.githubusercontent.com/actions/checkout/v5/action.yml"
         );
     }
 

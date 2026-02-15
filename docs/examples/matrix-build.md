@@ -4,10 +4,12 @@ Test across multiple operating systems and Node.js versions.
 
 ## Workflow
 
-```typescript
+```ts twoslash
+// @filename: examples/workflows/example.ts
+// ---cut---
 import { getAction, Job, Workflow } from "../../generated/index.js";
 
-const checkout = getAction("actions/checkout@v4");
+const checkout = getAction("actions/checkout@v5");
 const setupNode = getAction("actions/setup-node@v4");
 
 // Define matrix test job
@@ -79,7 +81,7 @@ jobs:
           - '22'
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Setup Node.js ${{ matrix.node }}
         uses: actions/setup-node@v4
         with:
@@ -143,10 +145,12 @@ This creates **9 jobs** (3 OS × 3 Node versions).
 
 ## Advanced Example: Test + Build
 
-```typescript
+```ts twoslash
+// @filename: examples/workflows/example.ts
+// ---cut---
 import { getAction, Job, Workflow } from "../../generated/index.js";
 
-const checkout = getAction("actions/checkout@v4");
+const checkout = getAction("actions/checkout@v5");
 const setupNode = getAction("actions/setup-node@v4");
 const uploadArtifact = getAction("actions/upload-artifact@v4");
 

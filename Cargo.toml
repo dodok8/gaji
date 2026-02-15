@@ -1,6 +1,6 @@
 [package]
 name = "gaji"
-version = "0.3.1"
+version = "0.4.3"
 edition = "2021"
 description = "Type-safe GitHub Actions workflows in TypeScript"
 license = "MIT"
@@ -10,9 +10,11 @@ categories = ["development-tools", "command-line-utilities"]
 
 [dependencies]
 anyhow = "1.0.101"
-clap = { version = "4.5.58", features = ["derive"] }
+clap = { version = "4.5.58", features = ["derive", "suggestions"] }
+clap_complete = "4.5.66"
 colored = "3.1.1"
 dialoguer = "0.11"
+futures = "0.3"
 indicatif = "0.18.3"
 notify = "8.2.0"
 oxc_allocator = "0.113.0"

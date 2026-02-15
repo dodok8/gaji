@@ -45,7 +45,7 @@ This will:
 Add GitHub Actions you want to use:
 
 ```bash
-gaji init add actions/checkout@v4
+gaji init add actions/checkout@v5
 gaji init add actions/setup-node@v4
 ```
 
@@ -58,11 +58,13 @@ This will:
 
 Create `workflows/ci.ts`:
 
-```typescript
+```ts twoslash
+// @filename: workflows/example.ts
+// ---cut---
 import { getAction, Job, Workflow } from "../generated/index.js";
 
 // Get actions with full type safety
-const checkout = getAction("actions/checkout@v4");
+const checkout = getAction("actions/checkout@v5");
 const setupNode = getAction("actions/setup-node@v4");
 
 // Define the build job
@@ -141,7 +143,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:

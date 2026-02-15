@@ -49,7 +49,20 @@ pub fn detect_project_state(root: &Path) -> Result<ProjectState> {
         })
         .unwrap_or(false);
 
-    if has_workflows {
+    let has_actions = root
+        .join(".github/actions")
+        .read_dir()
+        .ok()
+        .map(|entries| {
+            entries.filter_map(|e| e.ok()).any(|e| {
+                e.path().is_dir()
+                    && (e.path().join("action.yml").exists()
+                        || e.path().join("action.yaml").exists())
+            })
+        })
+        .unwrap_or(false);
+
+    if has_workflows || has_actions {
         return Ok(ProjectState::HasWorkflows);
     }
 
@@ -150,7 +163,7 @@ pub(crate) async fn init_existing_project(root: &Path, options: &InitOptions) ->
     Ok(())
 }
 
-/// Has .github/workflows/*.yml: offer migration, then proceed like existing project.
+/// Has .github/workflows/*.yml or .github/actions/: offer migration, then proceed like existing project.
 async fn init_with_workflows(root: &Path, options: &InitOptions) -> Result<()> {
     println!(
         "{} Adding gaji to project with existing workflows...\n",
@@ -166,11 +179,30 @@ async fn init_with_workflows(root: &Path, options: &InitOptions) -> Result<()> {
         println!();
     }
 
+    let existing_actions = migration::discover_actions(root)?;
+    if !existing_actions.is_empty() {
+        println!("Found {} existing action(s):", existing_actions.len());
+        for action in &existing_actions {
+            let action_id = action
+                .parent()
+                .and_then(|p| p.file_name())
+                .and_then(|s| s.to_str())
+                .unwrap_or("unknown");
+            println!("  - {}", action_id);
+        }
+        println!();
+    }
+
     if options.migrate {
-        migration::migrate_workflows(root, &existing_workflows).await?;
-    } else if !existing_workflows.is_empty() {
+        if !existing_workflows.is_empty() {
+            migration::migrate_workflows(root, &existing_workflows).await?;
+        }
+        if !existing_actions.is_empty() {
+            migration::migrate_actions(root, &existing_actions).await?;
+        }
+    } else if !existing_workflows.is_empty() || !existing_actions.is_empty() {
         println!(
-            "{} Tip: Run with --migrate to convert existing YAML workflows to TypeScript",
+            "{} Tip: Run with --migrate to convert existing YAML workflows and actions to TypeScript",
             "💡".yellow()
         );
         println!("   gaji init --migrate\n");
@@ -191,7 +223,7 @@ async fn create_directories(root: &Path) -> Result<()> {
     Ok(())
 }
 
-async fn update_package_json(root: &Path) -> Result<()> {
+pub(crate) async fn update_package_json(root: &Path) -> Result<()> {
     let path = root.join("package.json");
     let content = fs::read_to_string(&path)
         .await
@@ -234,7 +266,7 @@ async fn update_package_json(root: &Path) -> Result<()> {
     Ok(())
 }
 
-async fn handle_tsconfig(root: &Path, options: &InitOptions) -> Result<()> {
+pub(crate) async fn handle_tsconfig(root: &Path, options: &InitOptions) -> Result<()> {
     let path = root.join("tsconfig.json");
 
     if path.exists() {
@@ -264,7 +296,7 @@ async fn handle_tsconfig(root: &Path, options: &InitOptions) -> Result<()> {
     Ok(())
 }
 
-async fn ensure_gitignore(root: &Path, may_exist: bool) -> Result<()> {
+pub(crate) async fn ensure_gitignore(root: &Path, may_exist: bool) -> Result<()> {
     let path = root.join(".gitignore");
 
     if may_exist && path.exists() {
@@ -310,7 +342,7 @@ fn create_config(root: &Path) -> Result<()> {
     Ok(())
 }
 
-async fn try_generate_initial_types(root: &Path) {
+pub(crate) async fn try_generate_initial_types(root: &Path) {
     match generate_initial_types(root).await {
         Ok(()) => {}
         Err(e) => {
@@ -357,7 +389,7 @@ async fn generate_initial_types(root: &Path) -> Result<()> {
     Ok(())
 }
 
-fn print_next_steps() {
+pub(crate) fn print_next_steps() {
     println!("Next steps:");
     println!("  1. Edit workflows/*.ts");
     println!("  2. Run: gaji dev");
@@ -520,7 +552,7 @@ mod tests {
         create_example_workflow(temp.path()).await.unwrap();
         let content = std::fs::read_to_string(temp.path().join("workflows/ci.ts")).unwrap();
         assert!(content.contains("getAction"));
-        assert!(content.contains("actions/checkout@v4"));
+        assert!(content.contains("actions/checkout@v5"));
         assert!(content.contains("workflow.build"));
     }
 

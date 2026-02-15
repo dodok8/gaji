@@ -145,13 +145,13 @@ gaji add <ACTION_REF>
 
 | 인수 | 설명 |
 |------|------|
-| `<ACTION_REF>` | GitHub 액션 참조 (예: `actions/checkout@v4`) |
+| `<ACTION_REF>` | GitHub 액션 참조 (예: `actions/checkout@v5`) |
 
 **예제:**
 
 ```bash
 # 일반 액션 추가
-gaji add actions/checkout@v4
+gaji add actions/checkout@v5
 gaji add actions/setup-node@v4
 gaji add actions/cache@v4
 
@@ -239,7 +239,7 @@ npm install -D gaji
 gaji init
 
 # 액션 추가
-gaji add actions/checkout@v4
+gaji add actions/checkout@v5
 gaji add actions/setup-node@v4
 
 # 타입 생성
@@ -305,7 +305,7 @@ gaji dev
 
 ```bash
 # ✅ 올바름
-gaji add actions/checkout@v4
+gaji add actions/checkout@v5
 
 # ❌ 잘못됨
 gaji add checkout  # owner와 버전이 누락됨
@@ -325,7 +325,7 @@ export HTTPS_PROXY=http://proxy.example.com:8080
 액션 추가 후 `gaji dev`를 실행했는지 확인하세요:
 
 ```bash
-gaji add actions/checkout@v4
+gaji add actions/checkout@v5
 gaji dev  # 잊지 마세요!
 ```
 

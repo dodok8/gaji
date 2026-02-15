@@ -11,7 +11,7 @@
 ```typescript
 import { CompositeJob, getAction } from "../../generated/index.js";
 
-const checkout = getAction("actions/checkout@v4");
+const checkout = getAction("actions/checkout@v5");
 const setupNode = getAction("actions/setup-node@v4");
 
 // 재사용 가능한 작업 클래스 정의

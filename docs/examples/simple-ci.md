@@ -4,11 +4,13 @@ A basic CI workflow that runs tests on push and pull requests.
 
 ## Workflow
 
-```typescript
+```ts twoslash
+// @filename: examples/workflows/example.ts
+// ---cut---
 import { getAction, Job, Workflow } from "../../generated/index.js";
 
 // Add actions
-const checkout = getAction("actions/checkout@v4");
+const checkout = getAction("actions/checkout@v5");
 const setupNode = getAction("actions/setup-node@v4");
 
 // Define the test job
@@ -69,7 +71,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -87,7 +89,7 @@ jobs:
 
 1. **Add required actions**:
    ```bash
-   gaji add actions/checkout@v4
+   gaji add actions/checkout@v5
    gaji add actions/setup-node@v4
    ```
 

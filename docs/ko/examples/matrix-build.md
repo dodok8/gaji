@@ -7,7 +7,7 @@
 ```typescript
 import { getAction, Job, Workflow } from "../../generated/index.js";
 
-const checkout = getAction("actions/checkout@v4");
+const checkout = getAction("actions/checkout@v5");
 const setupNode = getAction("actions/setup-node@v4");
 
 // 매트릭스 테스트 작업 정의

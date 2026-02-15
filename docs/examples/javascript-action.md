@@ -6,7 +6,9 @@ Create Node.js-based GitHub Actions and use them in workflows.
 
 Create `workflows/hello.ts`:
 
-```typescript
+```ts twoslash
+// @filename: workflows/example.ts
+// ---cut---
 import { JavaScriptAction } from "../generated/index.js";
 
 const action = new JavaScriptAction(
@@ -47,7 +49,9 @@ This generates `.github/actions/hello-world/action.yml`.
 
 You can define the action and a workflow that uses it in the same file:
 
-```typescript
+```ts twoslash
+// @filename: workflows/example.ts
+// ---cut---
 import { CallAction, JavaScriptAction, Job, Workflow } from "../generated/index.js";
 
 // Define the action

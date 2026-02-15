@@ -9,6 +9,7 @@
     "docs:preview": "vitepress preview"
   },
   "devDependencies": {
+    "@shikijs/vitepress-twoslash": "^3.22.0",
     "vitepress": "^2.0.0-alpha.16"
   }
 }

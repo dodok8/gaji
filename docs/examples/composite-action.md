@@ -10,10 +10,12 @@ Create a reusable action that can be shared across workflows.
 
 Create `actions/setup-env/action.ts`:
 
-```typescript
+```ts twoslash
+// @filename: examples/workflows/example.ts
+// ---cut---
 import { CompositeAction, getAction } from "../../generated/index.js";
 
-const checkout = getAction("actions/checkout@v4");
+const checkout = getAction("actions/checkout@v5");
 const setupNode = getAction("actions/setup-node@v4");
 const cache = getAction("actions/cache@v4");
 
@@ -71,7 +73,9 @@ This generates `actions/setup-env/action.yml`.
 
 In your workflow:
 
-```typescript
+```ts twoslash
+// @filename: examples/workflows/example.ts
+// ---cut---
 import { getAction, Job, Workflow } from "../../generated/index.js";
 
 // Reference local composite action
@@ -103,10 +107,12 @@ Create reusable job templates with `CompositeJob`.
 
 ### Basic Example
 
-```typescript
-import { CompositeJob, getAction } from "../../generated/index.js";
+```ts twoslash
+// @filename: examples/workflows/example.ts
+// ---cut---
+import { CompositeJob, getAction, Workflow } from "../../generated/index.js";
 
-const checkout = getAction("actions/checkout@v4");
+const checkout = getAction("actions/checkout@v5");
 const setupNode = getAction("actions/setup-node@v4");
 
 // Define a reusable job class
@@ -150,10 +156,12 @@ workflow.build("test-matrix");
 
 ### Advanced Example: Parameterized Deploy Job
 
-```typescript
-import { CompositeJob, getAction } from "../../generated/index.js";
+```ts twoslash
+// @filename: examples/workflows/example.ts
+// ---cut---
+import { CompositeJob, getAction, Workflow } from "../../generated/index.js";
 
-const checkout = getAction("actions/checkout@v4");
+const checkout = getAction("actions/checkout@v5");
 const setupNode = getAction("actions/setup-node@v4");
 
 class DeployJob extends CompositeJob {
@@ -221,10 +229,12 @@ workflow.build("deploy");
 
 ### Complex Example: Reusable Test Suite
 
-```typescript
-import { CompositeJob, getAction } from "../../generated/index.js";
+```ts twoslash
+// @filename: examples/workflows/example.ts
+// ---cut---
+import { CompositeJob, getAction, Workflow } from "../../generated/index.js";
 
-const checkout = getAction("actions/checkout@v4");
+const checkout = getAction("actions/checkout@v5");
 const setupNode = getAction("actions/setup-node@v4");
 const uploadArtifact = getAction("actions/upload-artifact@v4");
 const uploadCodecov = getAction("codecov/codecov-action@v4");

@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.3](https://github.com/dodok8/gaji/compare/v0.4.2...v0.4.3) - 2026-02-14
+
+### Added
+
+- action migration (action.yml → TypeScript) ([#45](https://github.com/dodok8/gaji/pull/45))
+
+## [0.4.2](https://github.com/dodok8/gaji/compare/v0.4.1...v0.4.2) - 2026-02-14
+
+### Added
+
+- parallel action.yml downloads with buffer_unordered ([#44](https://github.com/dodok8/gaji/pull/44))
+
+### Other
+
+- update roadmap
+
+## [0.4.1](https://github.com/dodok8/gaji/compare/v0.4.0...v0.4.1) - 2026-02-14
+
+### Added
+
+- use ignored_patterns config in watcher and builder ([#41](https://github.com/dodok8/gaji/pull/41))
+
+## [0.4.0](https://github.com/dodok8/gaji/compare/v0.3.2...v0.4.0) - 2026-02-14
+
+### Added
+
+- enhance CLI with completions, suggestions, and interactive init ([#38](https://github.com/dodok8/gaji/pull/38))
+
+## [0.3.2](https://github.com/dodok8/gaji/compare/v0.3.1...v0.3.2) - 2026-02-14
+
+### Other
+
+- add twoslash hover-to-show-type and document known limitations ([#36](https://github.com/dodok8/gaji/pull/36))
+
 ## [0.3.1](https://github.com/dodok8/gaji/compare/v0.3.0...v0.3.1) - 2026-02-13
 
 ### Added

@@ -14,11 +14,13 @@ A gaji workflow consists of three main components:
 2. **Jobs**: Created using the `Job` class
 3. **Workflows**: Created using the `Workflow` class
 
-```typescript
+```ts twoslash
+// @filename: workflows/example.ts
+// ---cut---
 import { getAction, Job, Workflow } from "../generated/index.js";
 
 // 1. Import actions
-const checkout = getAction("actions/checkout@v4");
+const checkout = getAction("actions/checkout@v5");
 
 // 2. Create jobs
 const build = new Job("ubuntu-latest")
@@ -41,7 +43,7 @@ workflow.build("ci");
 First, add the action and generate types:
 
 ```bash
-gaji add actions/checkout@v4
+gaji add actions/checkout@v5
 ```
 
 ### Importing Actions
@@ -49,7 +51,7 @@ gaji add actions/checkout@v4
 Import actions using `getAction()`:
 
 ```typescript
-const checkout = getAction("actions/checkout@v4");
+const checkout = getAction("actions/checkout@v5");
 const setupNode = getAction("actions/setup-node@v4");
 const cache = getAction("actions/cache@v4");
 ```
@@ -279,8 +281,12 @@ const test = new Job("${{ matrix.os }}")
 
 Create reusable composite actions:
 
-```typescript
-import { CompositeAction } from "../generated/index.js";
+```ts twoslash
+// @filename: workflows/example.ts
+// ---cut---
+import { CompositeAction, getAction } from "../generated/index.js";
+
+const checkout = getAction("actions/checkout@v5");
 
 const myAction = new CompositeAction({
   name: "My Action",
@@ -306,10 +312,12 @@ This generates `action.yml` in your repository.
 
 Create reusable job templates using `CompositeJob`:
 
-```typescript
-import { CompositeJob, getAction } from "../generated/index.js";
+```ts twoslash
+// @filename: workflows/example.ts
+// ---cut---
+import { CompositeJob, getAction, Workflow } from "../generated/index.js";
 
-const checkout = getAction("actions/checkout@v4");
+const checkout = getAction("actions/checkout@v5");
 const setupNode = getAction("actions/setup-node@v4");
 
 // Define a reusable job class
@@ -488,6 +496,56 @@ setupNode({
 ```
 
 **Note**: While gaji provides type safety for property keys and types, it cannot validate string values (e.g., `cache: "npn"` vs `cache: "npm"`) at compile time. Always review generated YAML to catch such typos.
+
+## Known Limitations
+
+### `getAction()` Requires String Literals
+
+gaji statically analyzes your TypeScript files to extract action references **without executing them**. This means `getAction()` only works with string literals:
+
+```typescript
+// ✅ Works - string literal
+const checkout = getAction("actions/checkout@v5");
+
+// ❌ Does NOT work - variable reference
+const ref = "actions/checkout@v5";
+const checkout = getAction(ref);
+
+// ❌ Does NOT work - template literal
+const checkout = getAction(`actions/checkout@v${version}`);
+
+// ❌ Does NOT work - object property
+const checkout = getAction(config.checkoutRef);
+```
+
+If gaji cannot detect the action reference, it won't fetch the `action.yml` or generate types for that action. Always pass the full `owner/repo@version` string directly.
+
+### String Escaping in YAML Output
+
+Since gaji converts JavaScript strings to YAML, characters that are already escaped in JavaScript may be double-escaped in the output. For example:
+
+```typescript
+// In TypeScript, \n is a newline character
+.addStep({ run: "echo \"hello\nworld\"" })
+```
+
+The JS string contains a literal newline, which YAML will handle correctly. However, if you actually want the literal `\n` characters in the YAML output (e.g., for multiline `echo`), you need to double-escape:
+
+```typescript
+// Double-escape to preserve the literal \n in YAML
+.addStep({ run: "echo hello\\nworld" })
+```
+
+**Tip**: For multi-line commands, prefer template literals instead of escape sequences:
+
+```typescript
+.addStep({
+  run: `
+    echo hello
+    echo world
+  `.trim(),
+})
+```
 
 ## Next Steps
 

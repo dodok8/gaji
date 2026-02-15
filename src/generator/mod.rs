@@ -63,17 +63,37 @@ impl TypeGenerator {
                 .unwrap()
                 .progress_chars("━━─"),
         );
+        pb.set_message("fetching action metadata...");
 
-        for action_ref in action_refs {
-            pb.set_message(action_ref.clone());
-            match self.generate_type_for_ref(action_ref).await {
-                Ok((path, info)) => {
-                    generated_files.push(path);
-                    action_infos.push(info);
+        // Fetch all action metadata in parallel (max 10 concurrent requests)
+        let fetch_results = self
+            .fetcher
+            .fetch_action_metadata_batch(action_refs, 10)
+            .await;
+
+        pb.set_message("generating types...");
+
+        for (action_ref, result) in fetch_results {
+            match result {
+                Ok(metadata) => {
+                    match self
+                        .generate_type_from_metadata(&action_ref, &metadata)
+                        .await
+                    {
+                        Ok((path, info)) => {
+                            generated_files.push(path);
+                            action_infos.push(info);
+                        }
+                        Err(e) => {
+                            pb.suspend(|| {
+                                eprintln!("Failed to generate types for {}: {}", action_ref, e);
+                            });
+                        }
+                    }
                 }
                 Err(e) => {
                     pb.suspend(|| {
-                        eprintln!("Failed to generate types for {}: {}", action_ref, e);
+                        eprintln!("Failed to fetch metadata for {}: {}", action_ref, e);
                     });
                 }
             }
@@ -107,9 +127,9 @@ impl TypeGenerator {
     async fn generate_type_for_ref(
         &mut self,
         action_ref: &str,
+        metadata: &crate::fetcher::ActionMetadata,
     ) -> Result<(PathBuf, ActionTypeInfo)> {
-        let metadata = self.fetcher.fetch_action_metadata(action_ref).await?;
-        let type_def = generate_type_definition(action_ref, &metadata);
+        let type_def = generate_type_definition(action_ref, metadata);
 
         let interface_name = action_ref_to_interface_name(action_ref);
         let module_name = action_ref_to_module_name(action_ref);
@@ -210,7 +230,7 @@ export declare class CompositeJob extends Job {
 
 export declare class Workflow {
     constructor(config: WorkflowConfig);
-    addJob(id: string, job: Job | CompositeJob): this;
+    addJob(id: string, job: Job | CompositeJob | CallJob): this;
     static fromObject(def: WorkflowDefinition, id?: string): Workflow;
     toJSON(): WorkflowDefinition;
     build(id?: string): void;
@@ -320,7 +340,7 @@ pub fn action_ref_to_filename(action_ref: &str) -> String {
 }
 
 pub fn action_ref_to_interface_name(action_ref: &str) -> String {
-    // "actions/checkout@v4" -> "ActionsCheckoutV4"
+    // "actions/checkout@v5" -> "ActionsCheckoutV5"
     action_ref
         .split(['/', '@', '-', '.'])
         .filter(|s| !s.is_empty())
@@ -353,8 +373,8 @@ mod tests {
     #[test]
     fn test_action_ref_to_filename() {
         assert_eq!(
-            action_ref_to_filename("actions/checkout@v4"),
-            "actions-checkout-v4.d.ts"
+            action_ref_to_filename("actions/checkout@v5"),
+            "actions-checkout-v5.d.ts"
         );
         assert_eq!(
             action_ref_to_filename("owner/repo/path@main"),
@@ -365,8 +385,8 @@ mod tests {
     #[test]
     fn test_action_ref_to_interface_name() {
         assert_eq!(
-            action_ref_to_interface_name("actions/checkout@v4"),
-            "ActionsCheckoutV4"
+            action_ref_to_interface_name("actions/checkout@v5"),
+            "ActionsCheckoutV5"
         );
         assert_eq!(
             action_ref_to_interface_name("actions/setup-node@v4"),

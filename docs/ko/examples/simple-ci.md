@@ -7,7 +7,7 @@ push 및 pull request에서 테스트를 실행하는 기본 CI 워크플로우�
 ```typescript
 import { getAction, Job, Workflow } from "../../generated/index.js";
 
-const checkout = getAction("actions/checkout@v4");
+const checkout = getAction("actions/checkout@v5");
 const setupNode = getAction("actions/setup-node@v4");
 
 // 테스트 작업 정의
@@ -56,7 +56,7 @@ workflow.build("ci");
 
 1. **필요한 액션 추가**:
    ```bash
-   gaji add actions/checkout@v4
+   gaji add actions/checkout@v5
    gaji add actions/setup-node@v4
    ```
 
