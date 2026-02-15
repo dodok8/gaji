@@ -186,7 +186,7 @@ impl GitHubFetcher {
         }
     }
 
-    pub async fn fetch_action_metadata(&self, action_ref_str: &str) -> Result<ActionMetadata> {
+    pub async fn fetch_action_metadata(&mut self, action_ref_str: &str) -> Result<ActionMetadata> {
         // Check cache first (with TTL expiration)
         if !self.cache.is_expired(action_ref_str, self.cache_ttl_days) {
             if let Some(cached) = self.cache.get(action_ref_str) {
