@@ -260,9 +260,7 @@ fn generate_typescript_from_action_yaml(yaml_content: &str, action_id: &str) -> 
     match action_type {
         ActionType::Composite => generate_composite_action_ts(&action, action_id),
         ActionType::JavaScript(using) => generate_javascript_action_ts(&action, action_id, &using),
-        ActionType::Docker => Err(anyhow!(
-            "Docker actions are not yet supported for migration"
-        )),
+        ActionType::Docker => generate_docker_action_ts(&action, action_id),
         ActionType::Unknown(using) => Err(anyhow!(
             "Unknown action type '{}' cannot be migrated",
             using
@@ -410,6 +408,111 @@ fn generate_javascript_action_ts(
     }
     if let Some(post) = runs.get("post").and_then(|v| v.as_str()) {
         ts.push_str(&format!("        post: \"{}\",\n", escape_js_string(post)));
+    }
+    if let Some(pre_if) = runs.get("pre-if").and_then(|v| v.as_str()) {
+        ts.push_str(&format!(
+            "        \"pre-if\": \"{}\",\n",
+            escape_js_string(pre_if)
+        ));
+    }
+    if let Some(post_if) = runs.get("post-if").and_then(|v| v.as_str()) {
+        ts.push_str(&format!(
+            "        \"post-if\": \"{}\",\n",
+            escape_js_string(post_if)
+        ));
+    }
+
+    ts.push_str("    },\n");
+    ts.push_str(");\n\n");
+
+    ts.push_str(&format!("action.build(\"{}\");\n", action_id));
+
+    Ok(ts)
+}
+
+/// Generate TypeScript for a DockerAction.
+fn generate_docker_action_ts(action: &serde_yaml::Value, action_id: &str) -> Result<String> {
+    let mut ts = String::new();
+
+    // Header
+    ts.push_str("// Migrated from YAML by gaji init --migrate\n");
+    ts.push_str("// NOTE: This is a basic conversion. Please review and adjust as needed.\n");
+    ts.push_str("import { DockerAction } from \"../generated/index.js\";\n\n");
+
+    let name = action
+        .get("name")
+        .and_then(|v| v.as_str())
+        .unwrap_or("Untitled Action");
+    let description = action
+        .get("description")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+
+    let runs = action
+        .get("runs")
+        .ok_or_else(|| anyhow!("Missing 'runs' field"))?;
+    let image = runs
+        .get("image")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| anyhow!("Missing 'runs.image' field"))?;
+
+    // Config object
+    ts.push_str("const action = new DockerAction(\n");
+    ts.push_str("    {\n");
+    ts.push_str(&format!("        name: \"{}\",\n", escape_js_string(name)));
+    ts.push_str(&format!(
+        "        description: \"{}\",\n",
+        escape_js_string(description)
+    ));
+
+    if let Some(inputs) = action.get("inputs") {
+        ts.push_str("        inputs: ");
+        ts.push_str(&yaml_value_to_js(inputs, 8));
+        ts.push_str(",\n");
+    }
+    if let Some(outputs) = action.get("outputs") {
+        ts.push_str("        outputs: ");
+        ts.push_str(&yaml_value_to_js(outputs, 8));
+        ts.push_str(",\n");
+    }
+
+    ts.push_str("    },\n");
+
+    // Runs object
+    ts.push_str("    {\n");
+    ts.push_str("        using: \"docker\",\n");
+    ts.push_str(&format!(
+        "        image: \"{}\",\n",
+        escape_js_string(image)
+    ));
+
+    if let Some(entrypoint) = runs.get("entrypoint").and_then(|v| v.as_str()) {
+        ts.push_str(&format!(
+            "        entrypoint: \"{}\",\n",
+            escape_js_string(entrypoint)
+        ));
+    }
+    if let Some(args) = runs.get("args") {
+        ts.push_str("        args: ");
+        ts.push_str(&yaml_value_to_js(args, 8));
+        ts.push_str(",\n");
+    }
+    if let Some(env) = runs.get("env") {
+        ts.push_str("        env: ");
+        ts.push_str(&yaml_value_to_js(env, 8));
+        ts.push_str(",\n");
+    }
+    if let Some(pre) = runs.get("pre-entrypoint").and_then(|v| v.as_str()) {
+        ts.push_str(&format!(
+            "        \"pre-entrypoint\": \"{}\",\n",
+            escape_js_string(pre)
+        ));
+    }
+    if let Some(post) = runs.get("post-entrypoint").and_then(|v| v.as_str()) {
+        ts.push_str(&format!(
+            "        \"post-entrypoint\": \"{}\",\n",
+            escape_js_string(post)
+        ));
     }
     if let Some(pre_if) = runs.get("pre-if").and_then(|v| v.as_str()) {
         ts.push_str(&format!(
@@ -1077,11 +1180,37 @@ runs:
     }
 
     #[test]
-    fn test_generate_docker_action_fails() {
-        let yaml_content = "name: Docker\nruns:\n  using: docker\n  image: Dockerfile";
-        let result = generate_typescript_from_action_yaml(yaml_content, "docker-action");
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Docker"));
+    fn test_generate_docker_action_ts() {
+        let yaml_content = r#"
+name: My Docker Action
+description: Run a Docker container
+inputs:
+  tag:
+    description: Docker image tag
+    required: true
+runs:
+  using: docker
+  image: Dockerfile
+  entrypoint: entrypoint.sh
+  args:
+    - --tag
+    - ${{ inputs.tag }}
+  env:
+    REGISTRY: ghcr.io
+  pre-entrypoint: setup.sh
+  post-entrypoint: cleanup.sh
+"#;
+        let result = generate_typescript_from_action_yaml(yaml_content, "my-docker-action");
+        assert!(result.is_ok());
+        let ts = result.unwrap();
+        assert!(ts.contains("import { DockerAction }"));
+        assert!(ts.contains("new DockerAction("));
+        assert!(ts.contains("using: \"docker\""));
+        assert!(ts.contains("image: \"Dockerfile\""));
+        assert!(ts.contains("entrypoint: \"entrypoint.sh\""));
+        assert!(ts.contains("\"pre-entrypoint\": \"setup.sh\""));
+        assert!(ts.contains("\"post-entrypoint\": \"cleanup.sh\""));
+        assert!(ts.contains("action.build(\"my-docker-action\")"));
     }
 
     #[test]
