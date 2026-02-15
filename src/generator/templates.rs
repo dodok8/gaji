@@ -169,6 +169,25 @@ export interface JavaScriptActionRuns {
     'pre-if'?: string;
     'post-if'?: string;
 }
+
+export interface DockerActionConfig {
+    name: string;
+    description: string;
+    inputs?: Record<string, ActionInputDefinition>;
+    outputs?: Record<string, ActionOutputDefinition>;
+}
+
+export interface DockerActionRuns {
+    using: 'docker';
+    image: string;
+    entrypoint?: string;
+    args?: string[];
+    env?: Record<string, string>;
+    'pre-entrypoint'?: string;
+    'post-entrypoint'?: string;
+    'pre-if'?: string;
+    'post-if'?: string;
+}
 "#;
 
 pub const GET_ACTION_BASE_RUNTIME_TEMPLATE: &str = r#"
@@ -419,6 +438,54 @@ export class JavaScriptAction {
         if (this._outputs !== undefined) obj.outputs = this._outputs;
         if (this._pre !== undefined) obj.runs.pre = this._pre;
         if (this._post !== undefined) obj.runs.post = this._post;
+        if (this._preIf !== undefined) obj.runs["pre-if"] = this._preIf;
+        if (this._postIf !== undefined) obj.runs["post-if"] = this._postIf;
+        return obj;
+    }
+
+    build(id) {
+        this._buildId = id || "action";
+        if (typeof __gha_build !== "undefined") {
+            __gha_build(this._buildId, JSON.stringify(this), "action");
+        } else {
+            console.log(JSON.stringify(this, null, 2));
+        }
+    }
+}
+
+export class DockerAction {
+    constructor(config, runs) {
+        this._name = config.name;
+        this._description = config.description;
+        this._inputs = config.inputs;
+        this._outputs = config.outputs;
+        this._image = runs.image;
+        this._entrypoint = runs.entrypoint;
+        this._args = runs.args;
+        this._env = runs.env;
+        this._preEntrypoint = runs["pre-entrypoint"];
+        this._postEntrypoint = runs["post-entrypoint"];
+        this._preIf = runs["pre-if"];
+        this._postIf = runs["post-if"];
+        this._buildId = undefined;
+    }
+
+    toJSON() {
+        var obj = {
+            name: this._name,
+            description: this._description,
+            runs: {
+                using: "docker",
+                image: this._image,
+            }
+        };
+        if (this._inputs !== undefined) obj.inputs = this._inputs;
+        if (this._outputs !== undefined) obj.outputs = this._outputs;
+        if (this._entrypoint !== undefined) obj.runs.entrypoint = this._entrypoint;
+        if (this._args !== undefined) obj.runs.args = this._args;
+        if (this._env !== undefined) obj.runs.env = this._env;
+        if (this._preEntrypoint !== undefined) obj.runs["pre-entrypoint"] = this._preEntrypoint;
+        if (this._postEntrypoint !== undefined) obj.runs["post-entrypoint"] = this._postEntrypoint;
         if (this._preIf !== undefined) obj.runs["pre-if"] = this._preIf;
         if (this._postIf !== undefined) obj.runs["post-if"] = this._postIf;
         return obj;

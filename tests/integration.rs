@@ -312,6 +312,65 @@ action.build("my-node-action");
     assert!(yaml_str.contains("main: dist/index.js"));
 }
 
+/// Test DockerAction migration roundtrip: TypeScript -> QuickJS -> JSON -> YAML.
+#[test]
+fn test_docker_action_migration_roundtrip() {
+    use gaji::executor;
+
+    let runtime_js = format!(
+        "function getAction(ref) {{ return function(config) {{ return {{ uses: ref }}; }}; }}\n{}",
+        gaji::generator::templates::JOB_WORKFLOW_RUNTIME_TEMPLATE
+    );
+
+    let runtime_stripped = strip_module_syntax(&runtime_js);
+
+    let action_js = r#"
+var action = new DockerAction(
+    {
+        name: "My Docker Action",
+        description: "A test Docker action",
+        inputs: {
+            tag: {
+                description: "Docker image tag",
+                required: true,
+            },
+        },
+    },
+    {
+        using: "docker",
+        image: "Dockerfile",
+        entrypoint: "entrypoint.sh",
+        args: ["--tag", "${{ inputs.tag }}"],
+        env: {
+            REGISTRY: "ghcr.io",
+        },
+    },
+);
+
+action.build("my-docker-action");
+"#;
+
+    let bundled = format!("{}\n\n{}", runtime_stripped, action_js);
+    let outputs = executor::execute_js(&bundled).unwrap();
+
+    assert_eq!(outputs.len(), 1);
+    assert_eq!(outputs[0].id, "my-docker-action");
+    assert_eq!(outputs[0].output_type, "action");
+
+    let json: serde_json::Value = serde_json::from_str(&outputs[0].json).unwrap();
+    assert_eq!(json["name"], "My Docker Action");
+    assert_eq!(json["runs"]["using"], "docker");
+    assert_eq!(json["runs"]["image"], "Dockerfile");
+    assert_eq!(json["runs"]["entrypoint"], "entrypoint.sh");
+    assert_eq!(json["runs"]["args"][0], "--tag");
+    assert_eq!(json["runs"]["env"]["REGISTRY"], "ghcr.io");
+
+    let yaml_str = serde_yaml::to_string(&json).unwrap();
+    assert!(yaml_str.contains("using: docker"));
+    assert!(yaml_str.contains("image: Dockerfile"));
+    assert!(yaml_str.contains("entrypoint: entrypoint.sh"));
+}
+
 /// Test WorkflowBuilder.build_all with an empty directory.
 #[tokio::test]
 async fn test_build_all_empty_directory() {
