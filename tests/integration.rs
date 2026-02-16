@@ -371,6 +371,263 @@ action.build("my-docker-action");
     assert!(yaml_str.contains("entrypoint: entrypoint.sh"));
 }
 
+/// Test that action step outputs are populated with correct expression strings
+/// when `id` is provided, and stripped from serialized JSON/YAML.
+#[test]
+fn test_action_step_outputs_with_id() {
+    use gaji::executor;
+
+    let runtime_js = format!(
+        r#"var __action_outputs = {{
+    'actions/checkout@v5': ['commit', 'ref'],
+}};
+{}
+{}"#,
+        gaji::generator::templates::GET_ACTION_RUNTIME_TEMPLATE,
+        gaji::generator::templates::JOB_WORKFLOW_RUNTIME_TEMPLATE,
+    );
+
+    let runtime_stripped = strip_module_syntax(&runtime_js);
+
+    let workflow_js = r#"
+var checkout = getAction("actions/checkout@v5");
+var step = checkout({ id: "my-checkout" });
+
+var build = new Job("ubuntu-latest")
+    .addStep(step)
+    .addStep({ name: "Use output", run: "echo " + step.outputs.ref });
+
+var wf = new Workflow({
+    name: "Output Test",
+    on: { push: {} },
+}).addJob("build", build);
+
+wf.build("output-test");
+"#;
+
+    let bundled = format!("{}\n\n{}", runtime_stripped, workflow_js);
+    let outputs = executor::execute_js(&bundled).unwrap();
+
+    assert_eq!(outputs.len(), 1);
+    let json: serde_json::Value = serde_json::from_str(&outputs[0].json).unwrap();
+
+    // Verify outputs and toJSON are NOT in the serialized step
+    let steps = json["jobs"]["build"]["steps"].as_array().unwrap();
+    assert!(steps[0].get("outputs").is_none());
+    assert!(steps[0].get("toJSON").is_none());
+    assert_eq!(steps[0]["id"], "my-checkout");
+    assert_eq!(steps[0]["uses"], "actions/checkout@v5");
+
+    // Verify the output expression was used in the second step's run command
+    assert_eq!(steps[1]["run"], "echo ${{ steps.my-checkout.outputs.ref }}");
+
+    // Verify YAML is clean
+    let yaml_str = serde_yaml::to_string(&json).unwrap();
+    assert!(yaml_str.contains("steps.my-checkout.outputs.ref"));
+    assert!(!yaml_str.contains("toJSON"));
+}
+
+/// Test that action step outputs are empty when no `id` is provided.
+#[test]
+fn test_action_step_outputs_without_id() {
+    use gaji::executor;
+
+    let runtime_js = format!(
+        r#"var __action_outputs = {{
+    'actions/checkout@v5': ['commit', 'ref'],
+}};
+{}
+{}"#,
+        gaji::generator::templates::GET_ACTION_RUNTIME_TEMPLATE,
+        gaji::generator::templates::JOB_WORKFLOW_RUNTIME_TEMPLATE,
+    );
+
+    let runtime_stripped = strip_module_syntax(&runtime_js);
+
+    // Without id, outputs should be empty, and accessing a key gives undefined
+    let workflow_js = r#"
+var checkout = getAction("actions/checkout@v5");
+var step = checkout({});
+
+var hasRef = step.outputs.ref !== undefined;
+
+var build = new Job("ubuntu-latest")
+    .addStep(step)
+    .addStep({ name: "Check", run: "hasRef=" + hasRef });
+
+var wf = new Workflow({
+    name: "No ID Test",
+    on: { push: {} },
+}).addJob("build", build);
+
+wf.build("no-id-test");
+"#;
+
+    let bundled = format!("{}\n\n{}", runtime_stripped, workflow_js);
+    let outputs = executor::execute_js(&bundled).unwrap();
+
+    assert_eq!(outputs.len(), 1);
+    let json: serde_json::Value = serde_json::from_str(&outputs[0].json).unwrap();
+
+    let steps = json["jobs"]["build"]["steps"].as_array().unwrap();
+
+    // Step should not have outputs or toJSON in serialized form
+    assert!(steps[0].get("outputs").is_none());
+    assert!(steps[0].get("toJSON").is_none());
+
+    // hasRef should be false since no id was provided
+    assert_eq!(steps[1]["run"], "hasRef=false");
+}
+
+/// Test job-to-job output passing via `jobOutputs`:
+/// - Build job defines outputs from step outputs
+/// - `jobOutputs` creates `${{ needs.<id>.outputs.<key> }}` expressions
+/// - Deploy job uses those expressions in a run command
+/// - Serialized YAML has correct outputs on the build job
+#[test]
+fn test_job_outputs_passing() {
+    use gaji::executor;
+
+    let runtime_js = format!(
+        r#"var __action_outputs = {{
+    'actions/checkout@v5': ['commit', 'ref'],
+}};
+{}
+{}"#,
+        gaji::generator::templates::GET_ACTION_RUNTIME_TEMPLATE,
+        gaji::generator::templates::JOB_WORKFLOW_RUNTIME_TEMPLATE,
+    );
+
+    let runtime_stripped = strip_module_syntax(&runtime_js);
+
+    let workflow_js = r#"
+var checkout = getAction("actions/checkout@v5");
+var step = checkout({ id: "my-checkout" });
+
+var build = new Job("ubuntu-latest")
+    .addStep(step)
+    .outputs({ ref: step.outputs.ref, sha: step.outputs.commit });
+
+var buildOutputs = jobOutputs("build", build);
+
+var deploy = new Job("ubuntu-latest")
+    .needs("build")
+    .addStep({ name: "Use output", run: "echo " + buildOutputs.ref + " " + buildOutputs.sha });
+
+var wf = new Workflow({
+    name: "Job Outputs Test",
+    on: { push: {} },
+})
+    .addJob("build", build)
+    .addJob("deploy", deploy);
+
+wf.build("job-outputs-test");
+"#;
+
+    let bundled = format!("{}\n\n{}", runtime_stripped, workflow_js);
+    let outputs = executor::execute_js(&bundled).unwrap();
+
+    assert_eq!(outputs.len(), 1);
+    let json: serde_json::Value = serde_json::from_str(&outputs[0].json).unwrap();
+
+    // Verify build job has outputs with step expressions
+    let build_outputs = &json["jobs"]["build"]["outputs"];
+    assert_eq!(build_outputs["ref"], "${{ steps.my-checkout.outputs.ref }}");
+    assert_eq!(
+        build_outputs["sha"],
+        "${{ steps.my-checkout.outputs.commit }}"
+    );
+
+    // Verify deploy job uses needs expressions
+    let deploy_steps = json["jobs"]["deploy"]["steps"].as_array().unwrap();
+    assert_eq!(
+        deploy_steps[0]["run"],
+        "echo ${{ needs.build.outputs.ref }} ${{ needs.build.outputs.sha }}"
+    );
+
+    // Verify deploy job has needs
+    assert_eq!(json["jobs"]["deploy"]["needs"], "build");
+
+    // Verify YAML output is clean
+    let yaml_str = serde_yaml::to_string(&json).unwrap();
+    assert!(yaml_str.contains("needs.build.outputs.ref"));
+    assert!(yaml_str.contains("steps.my-checkout.outputs.ref"));
+}
+
+/// Test job-to-job output passing with manually defined string outputs
+/// (not derived from action step outputs).
+#[test]
+fn test_job_outputs_passing_manual_values() {
+    use gaji::executor;
+
+    let runtime_js = format!(
+        r#"var __action_outputs = {{}};
+{}
+{}"#,
+        gaji::generator::templates::GET_ACTION_RUNTIME_TEMPLATE,
+        gaji::generator::templates::JOB_WORKFLOW_RUNTIME_TEMPLATE,
+    );
+
+    let runtime_stripped = strip_module_syntax(&runtime_js);
+
+    let workflow_js = r#"
+var setup = new Job("ubuntu-latest")
+    .addStep({ id: "version", run: 'echo "value=1.2.3" >> "$GITHUB_OUTPUT"' })
+    .addStep({ id: "hash", run: 'echo "value=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"' })
+    .outputs({
+        version: "${{ steps.version.outputs.value }}",
+        commit_hash: "${{ steps.hash.outputs.value }}",
+    });
+
+var setupOutputs = jobOutputs("setup", setup);
+
+var publish = new Job("ubuntu-latest")
+    .needs("setup")
+    .addStep({
+        name: "Publish",
+        run: "publish --version " + setupOutputs.version + " --hash " + setupOutputs.commit_hash,
+    });
+
+var wf = new Workflow({
+    name: "Manual Outputs Test",
+    on: { push: { tags: ["v*"] } },
+})
+    .addJob("setup", setup)
+    .addJob("publish", publish);
+
+wf.build("manual-outputs-test");
+"#;
+
+    let bundled = format!("{}\n\n{}", runtime_stripped, workflow_js);
+    let outputs = executor::execute_js(&bundled).unwrap();
+
+    assert_eq!(outputs.len(), 1);
+    let json: serde_json::Value = serde_json::from_str(&outputs[0].json).unwrap();
+
+    // Verify setup job outputs contain step expressions
+    let setup_outputs = &json["jobs"]["setup"]["outputs"];
+    assert_eq!(
+        setup_outputs["version"],
+        "${{ steps.version.outputs.value }}"
+    );
+    assert_eq!(
+        setup_outputs["commit_hash"],
+        "${{ steps.hash.outputs.value }}"
+    );
+
+    // Verify publish job uses needs expressions
+    let publish_steps = json["jobs"]["publish"]["steps"].as_array().unwrap();
+    assert_eq!(
+        publish_steps[0]["run"],
+        "publish --version ${{ needs.setup.outputs.version }} --hash ${{ needs.setup.outputs.commit_hash }}"
+    );
+
+    // Verify YAML
+    let yaml_str = serde_yaml::to_string(&json).unwrap();
+    assert!(yaml_str.contains("needs.setup.outputs.version"));
+    assert!(yaml_str.contains("steps.version.outputs.value"));
+}
+
 /// Test WorkflowBuilder.build_all with an empty directory.
 #[tokio::test]
 async fn test_build_all_empty_directory() {

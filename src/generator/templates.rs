@@ -15,7 +15,15 @@ export interface JobStep {
     'timeout-minutes'?: number;
 }
 
-export type Step = JobStep;
+export interface ActionStep<O = {}> extends JobStep {
+    readonly outputs: O;
+}
+
+export type Step = JobStep | ActionStep<any>;
+
+export type JobOutputs<T extends Record<string, string>> = {
+    readonly [K in keyof T]: string;
+};
 
 export interface JobDefinition {
     'runs-on': string | string[];
@@ -190,47 +198,111 @@ export interface DockerActionRuns {
 }
 "#;
 
-pub const GET_ACTION_BASE_RUNTIME_TEMPLATE: &str = r#"
-// Base getAction function type
-export function getAction<T extends string>(
-    ref: T
-): (config?: {
-    name?: string;
-    with?: Record<string, unknown>;
-    id?: string;
-    if?: string;
-    env?: Record<string, string>;
-}) => JobStep;
+pub const GET_ACTION_FALLBACK_DECL_TEMPLATE: &str = r#"
+export declare function getAction<T extends string>(ref: T): {
+    (config: { id: string; name?: string; with?: Record<string, unknown>; if?: string; env?: Record<string, string> }): ActionStep<Record<string, string>>;
+    (config?: { name?: string; with?: Record<string, unknown>; id?: string; if?: string; env?: Record<string, string> }): JobStep;
+};
 "#;
 
-pub const GET_ACTION_RUNTIME_IMPL_TEMPLATE: &str = r#"
-export function getAction(ref: string): (config?: {
-    name?: string;
-    with?: Record<string, unknown>;
-    id?: string;
-    if?: string;
-    env?: Record<string, string>;
-}) => JobStep {
-    return (config: {
-        name?: string;
-        with?: Record<string, unknown>;
-        id?: string;
-        if?: string;
-        env?: Record<string, string>;
-    } = {}) => {
-        const step: JobStep = {
-            uses: ref,
-        };
-
+pub const GET_ACTION_RUNTIME_TEMPLATE: &str = r#"
+export function getAction(ref) {
+    return function(config) {
+        if (config === undefined) config = {};
+        var step = { uses: ref };
         if (config.name !== undefined) step.name = config.name;
         if (config.with !== undefined) step.with = config.with;
         if (config.id !== undefined) step.id = config.id;
-        if (config.if !== undefined) step.if = config.if;
+        if (config["if"] !== undefined) step["if"] = config["if"];
         if (config.env !== undefined) step.env = config.env;
-
+        step.outputs = {};
+        var outputNames = __action_outputs[ref];
+        if (outputNames && config.id) {
+            for (var i = 0; i < outputNames.length; i++) {
+                step.outputs[outputNames[i]] =
+                    "${{ steps." + config.id + ".outputs." + outputNames[i] + " }}";
+            }
+        }
+        step.toJSON = function() {
+            var s = {};
+            for (var key in this) {
+                if (key !== 'outputs' && key !== 'toJSON') {
+                    s[key] = this[key];
+                }
+            }
+            return s;
+        };
         return step;
     };
 }
+"#;
+
+pub const CLASS_DECLARATIONS_TEMPLATE: &str = r#"
+export declare class Job<O extends Record<string, string> = {}> {
+    constructor(runsOn: string | string[], options?: Partial<JobDefinition>);
+    addStep(step: JobStep): this;
+    needs(deps: string | string[]): this;
+    env(env: Record<string, string>): this;
+    when(condition: string): this;
+    permissions(perms: Permissions): this;
+    outputs<T extends Record<string, string>>(outputs: T): Job<T>;
+    strategy(s: { matrix?: Record<string, unknown>; 'fail-fast'?: boolean; 'max-parallel'?: number }): this;
+    continueOnError(v: boolean): this;
+    timeoutMinutes(m: number): this;
+    toJSON(): JobDefinition;
+}
+
+export declare class CompositeJob<O extends Record<string, string> = {}> extends Job<O> {
+    constructor(runsOn: string | string[], options?: Partial<JobDefinition>);
+}
+
+export declare class Workflow {
+    constructor(config: WorkflowConfig);
+    addJob(id: string, job: Job<any> | CompositeJob<any> | CallJob): this;
+    static fromObject(def: WorkflowDefinition, id?: string): Workflow;
+    toJSON(): WorkflowDefinition;
+    build(id?: string): void;
+}
+
+export declare class CompositeAction {
+    constructor(config: { name: string; description: string; inputs?: Record<string, unknown>; outputs?: Record<string, unknown> });
+    addStep(step: JobStep): this;
+    toJSON(): object;
+    build(id?: string): void;
+}
+
+export declare class JavaScriptAction {
+    constructor(config: JavaScriptActionConfig, runs: JavaScriptActionRuns);
+    toJSON(): object;
+    build(id?: string): void;
+}
+
+export declare class DockerAction {
+    constructor(config: DockerActionConfig, runs: DockerActionRuns);
+    toJSON(): object;
+    build(id?: string): void;
+}
+
+export declare class CallJob {
+    constructor(uses: string);
+    with(inputs: Record<string, unknown>): this;
+    secrets(s: Record<string, unknown> | 'inherit'): this;
+    needs(deps: string | string[]): this;
+    when(condition: string): this;
+    permissions(perms: Permissions): this;
+    toJSON(): object;
+}
+
+export declare class CallAction {
+    constructor(uses: string);
+    static from(action: CompositeAction | JavaScriptAction | DockerAction): CallAction;
+    toJSON(): JobStep;
+}
+
+export declare function jobOutputs<O extends Record<string, string>>(
+    jobId: string,
+    job: Job<O>,
+): JobOutputs<O>;
 "#;
 
 pub const JOB_WORKFLOW_RUNTIME_TEMPLATE: &str = r#"
@@ -499,5 +571,16 @@ export class DockerAction {
             console.log(JSON.stringify(this, null, 2));
         }
     }
+}
+
+export function jobOutputs(jobId, job) {
+    var result = {};
+    var outputs = job._outputs;
+    if (outputs) {
+        for (var key in outputs) {
+            result[key] = "${{ needs." + jobId + ".outputs." + key + " }}";
+        }
+    }
+    return result;
 }
 "#;
