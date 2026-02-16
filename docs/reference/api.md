@@ -626,7 +626,7 @@ const job = new Job("ubuntu-latest")
 
 ### `jobOutputs()`
 
-Create typed references to a job's outputs for use in downstream jobs. Reads the output keys from the `Job` object's `.outputs()` call and generates `${{ needs.<jobId>.outputs.<key> }}` expressions.
+Create typed references to a job's outputs for use in downstream jobs. Reads the output keys from the `Job` object's `.outputs()` call and generates <code v-pre>${{ needs.&lt;jobId&gt;.outputs.&lt;key&gt; }}</code> expressions.
 
 ```typescript
 function jobOutputs<O extends Record<string, string>>(
@@ -713,7 +713,7 @@ type Step = JobStep | ActionStep<any>
 
 ### `JobOutputs<T>`
 
-Mapped type for typed job output references. Each key resolves to a `${{ needs.<jobId>.outputs.<key> }}` expression.
+Mapped type for typed job output references. Each key resolves to a <code v-pre>${{ needs.&lt;jobId&gt;.outputs.&lt;key&gt; }}</code> expression.
 
 ```typescript
 type JobOutputs<T extends Record<string, string>> = {

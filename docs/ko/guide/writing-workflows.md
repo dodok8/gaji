@@ -274,7 +274,7 @@ const job = new Job("ubuntu-latest")
 
 ### Job 간 출력 전달
 
-`jobOutputs()`를 사용하여 다운스트림 job을 위한 타입이 지정된 참조를 생성합니다. Job의 `.outputs()` 키를 읽어 `${{ needs.<jobId>.outputs.<key> }}` 표현식을 생성합니다:
+`jobOutputs()`를 사용하여 다운스트림 job을 위한 타입이 지정된 참조를 생성합니다. Job의 `.outputs()` 키를 읽어 <code v-pre>${{ needs.&lt;jobId&gt;.outputs.&lt;key&gt; }}</code> 표현식을 생성합니다:
 
 ```typescript
 const checkout = getAction("actions/checkout@v5");

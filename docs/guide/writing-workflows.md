@@ -546,7 +546,7 @@ const job = new Job("ubuntu-latest")
 
 ### Passing Outputs Between Jobs
 
-Use `jobOutputs()` to create typed references for downstream jobs. It reads the job's `.outputs()` keys and generates `${{ needs.<jobId>.outputs.<key> }}` expressions:
+Use `jobOutputs()` to create typed references for downstream jobs. It reads the job's `.outputs()` keys and generates <code v-pre>${{ needs.&lt;jobId&gt;.outputs.&lt;key&gt; }}</code> expressions:
 
 ```typescript
 const checkout = getAction("actions/checkout@v5");

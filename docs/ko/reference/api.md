@@ -620,7 +620,7 @@ const job = new Job("ubuntu-latest")
 
 ### `jobOutputs()`
 
-다운스트림 job에서 사용할 타입이 지정된 job 출력 참조를 생성합니다. `Job` 객체의 `.outputs()` 호출에서 출력 키를 읽어 `${{ needs.<jobId>.outputs.<key> }}` 표현식을 생성합니다.
+다운스트림 job에서 사용할 타입이 지정된 job 출력 참조를 생성합니다. `Job` 객체의 `.outputs()` 호출에서 출력 키를 읽어 <code v-pre>${{ needs.&lt;jobId&gt;.outputs.&lt;key&gt; }}</code> 표현식을 생성합니다.
 
 ```typescript
 function jobOutputs<O extends Record<string, string>>(
@@ -707,7 +707,7 @@ type Step = JobStep | ActionStep<any>
 
 ### `JobOutputs<T>`
 
-타입이 지정된 job 출력 참조를 위한 매핑 타입입니다. 각 키는 `${{ needs.<jobId>.outputs.<key> }}` 표현식으로 해석됩니다.
+타입이 지정된 job 출력 참조를 위한 매핑 타입입니다. 각 키는 <code v-pre>${{ needs.&lt;jobId&gt;.outputs.&lt;key&gt; }}</code> 표현식으로 해석됩니다.
 
 ```typescript
 type JobOutputs<T extends Record<string, string>> = {
