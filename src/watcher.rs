@@ -110,7 +110,7 @@ async fn handle_event(event: &Event) -> Result<()> {
         let token = gaji_config.resolve_token();
         let api_url = gaji_config.resolve_api_url();
         let cache = Cache::load_or_create()?;
-        let generator = TypeGenerator::with_cache_ttl(
+        let mut generator = TypeGenerator::with_cache_ttl(
             cache,
             std::path::PathBuf::from("generated"),
             token,

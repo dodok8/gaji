@@ -46,7 +46,7 @@ impl TypeGenerator {
     }
 
     pub async fn generate_types_for_refs(
-        &self,
+        &mut self,
         action_refs: &HashSet<String>,
     ) -> Result<Vec<PathBuf>> {
         fs::create_dir_all(&self.output_dir).await?;
@@ -127,8 +127,8 @@ impl TypeGenerator {
         Ok(file_path)
     }
 
-    async fn generate_type_from_metadata(
-        &self,
+    async fn generate_type_for_ref(
+        &mut self,
         action_ref: &str,
         metadata: &crate::fetcher::ActionMetadata,
     ) -> Result<(PathBuf, ActionTypeInfo)> {

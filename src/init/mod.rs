@@ -381,7 +381,7 @@ async fn generate_initial_types(root: &Path) -> Result<()> {
     let token = config.resolve_token();
     let api_url = config.resolve_api_url();
     let cache = Cache::load_or_create()?;
-    let generator = TypeGenerator::new(cache, root.join("generated"), token, api_url);
+    let mut generator = TypeGenerator::new(cache, root.join("generated"), token, api_url);
     generator.generate_types_for_refs(&all_refs).await?;
 
     println!("{} Types generated!", "✨".green());
