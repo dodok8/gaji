@@ -628,6 +628,59 @@ wf.build("manual-outputs-test");
     assert!(yaml_str.contains("steps.version.outputs.value"));
 }
 
+/// Test listing action references from a directory of workflow files.
+#[tokio::test]
+async fn test_list_action_refs_from_directory() {
+    let dir = tempfile::TempDir::new().unwrap();
+    let workflow_dir = dir.path().join("workflows");
+    std::fs::create_dir_all(&workflow_dir).unwrap();
+
+    std::fs::write(
+        workflow_dir.join("ci.ts"),
+        r#"
+        const checkout = getAction("actions/checkout@v5");
+        const setup = getAction("actions/setup-node@v4");
+        "#,
+    )
+    .unwrap();
+
+    std::fs::write(
+        workflow_dir.join("deploy.ts"),
+        r#"
+        const checkout = getAction("actions/checkout@v5");
+        const cache = getAction("actions/cache@v4");
+        "#,
+    )
+    .unwrap();
+
+    let results = gaji::parser::analyze_directory(&workflow_dir)
+        .await
+        .unwrap();
+
+    // Invert to action -> files
+    let mut action_to_files: std::collections::BTreeMap<String, Vec<String>> =
+        std::collections::BTreeMap::new();
+    for (file_path, refs) in &results {
+        for action_ref in refs {
+            action_to_files
+                .entry(action_ref.clone())
+                .or_default()
+                .push(file_path.file_name().unwrap().to_str().unwrap().to_string());
+        }
+    }
+    for files in action_to_files.values_mut() {
+        files.sort();
+    }
+
+    assert_eq!(action_to_files.len(), 3);
+    assert_eq!(
+        action_to_files["actions/checkout@v5"],
+        vec!["ci.ts", "deploy.ts"]
+    );
+    assert_eq!(action_to_files["actions/setup-node@v4"], vec!["ci.ts"]);
+    assert_eq!(action_to_files["actions/cache@v4"], vec!["deploy.ts"]);
+}
+
 /// Test WorkflowBuilder.build_all with an empty directory.
 #[tokio::test]
 async fn test_build_all_empty_directory() {

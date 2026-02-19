@@ -39,6 +39,9 @@ async fn main() -> Result<()> {
         } => {
             cmd_build(&input, output.as_deref(), dry_run).await?;
         }
+        Commands::List { input, json } => {
+            cmd_list(&input, json).await?;
+        }
         Commands::Add { action } => {
             cmd_add(&action).await?;
         }
@@ -167,6 +170,94 @@ async fn cmd_build(inputs: &[String], output: Option<&str>, dry_run: bool) -> Re
             built.len(),
             elapsed.as_secs_f64()
         );
+    }
+
+    Ok(())
+}
+
+async fn cmd_list(inputs: &[String], json_output: bool) -> Result<()> {
+    let config = Config::load()?;
+
+    let paths: Vec<PathBuf> = if inputs.is_empty() {
+        vec![PathBuf::from(&config.project.workflows_dir)]
+    } else {
+        inputs.iter().map(PathBuf::from).collect()
+    };
+
+    // Collect file -> action refs mapping
+    let mut file_refs: std::collections::HashMap<PathBuf, std::collections::HashSet<String>> =
+        std::collections::HashMap::new();
+
+    for path in &paths {
+        if !path.exists() {
+            if !json_output {
+                eprintln!("{} Path does not exist: {}", "⚠️".yellow(), path.display());
+            }
+            continue;
+        }
+        if path.is_dir() {
+            let results = parser::analyze_directory(path).await?;
+            file_refs.extend(results);
+        } else if path.is_file() {
+            match parser::analyze_file(path).await {
+                Ok(refs) => {
+                    if !refs.is_empty() {
+                        file_refs.insert(path.clone(), refs);
+                    }
+                }
+                Err(e) => {
+                    if !json_output {
+                        eprintln!(
+                            "{} Failed to parse {}: {}",
+                            "⚠️".yellow(),
+                            path.display(),
+                            e
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    // Invert: action ref -> sorted list of file paths
+    let mut action_to_files: std::collections::BTreeMap<String, Vec<String>> =
+        std::collections::BTreeMap::new();
+
+    for (file_path, refs) in &file_refs {
+        for action_ref in refs {
+            action_to_files
+                .entry(action_ref.clone())
+                .or_default()
+                .push(file_path.display().to_string());
+        }
+    }
+
+    for files in action_to_files.values_mut() {
+        files.sort();
+    }
+
+    if json_output {
+        let json = serde_json::to_string_pretty(&action_to_files)?;
+        println!("{}", json);
+    } else {
+        if action_to_files.is_empty() {
+            println!("{} No actions found.", "📋".cyan());
+            return Ok(());
+        }
+
+        println!(
+            "{} Found {} action(s) across {} file(s):\n",
+            "📋".cyan(),
+            action_to_files.len(),
+            file_refs.len()
+        );
+
+        for (action_ref, files) in &action_to_files {
+            println!("  {} {}", "•".green(), action_ref.bold());
+            for file in files {
+                println!("    {}", file.dimmed());
+            }
+        }
     }
 
     Ok(())

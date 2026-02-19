@@ -57,6 +57,17 @@ pub enum Commands {
         dry_run: bool,
     },
 
+    /// List all GitHub Actions used in workflow files
+    List {
+        /// Workflow directories or individual .ts files
+        #[arg(short, long, num_args = 1..)]
+        input: Vec<String>,
+
+        /// Output as JSON for scripting
+        #[arg(long)]
+        json: bool,
+    },
+
     /// Add a new action and generate types
     Add {
         /// Action reference (e.g., actions/checkout@v5)
