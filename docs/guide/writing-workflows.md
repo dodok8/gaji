@@ -256,7 +256,7 @@ const workflow = new Workflow({
 
 ## Matrix Builds
 
-Create matrix builds for testing across multiple versions:
+Use `.strategy()` to run a job across multiple configurations:
 
 ```typescript
 const test = new Job("${{ matrix.os }}")
@@ -266,49 +266,19 @@ const test = new Job("${{ matrix.os }}")
       node: ["18", "20", "22"],
     },
   })
-  .addStep(checkout({}))
-  .addStep(setupNode({
-    with: {
-      "node-version": "${{ matrix.node }}",
-    },
-  }))
-  .addStep({ run: "npm test" });
 ```
+
+For a complete matrix build example with generated YAML, see [Matrix Build Example](/examples/matrix-build).
 
 ## Composite Actions
 
-Create reusable [composite actions](https://docs.github.com/en/actions/sharing-automations/creating-actions/creating-a-composite-action):
+Create reusable [composite actions](https://docs.github.com/en/actions/sharing-automations/creating-actions/creating-a-composite-action) using `CompositeAction`. Define inputs, add steps, and call `.build()` to generate `action.yml` in your repository.
 
-```ts twoslash
-// @filename: workflows/example.ts
-// ---cut---
-import { CompositeAction, getAction } from "../generated/index.js";
-
-const checkout = getAction("actions/checkout@v5");
-
-const myAction = new CompositeAction({
-  name: "My Action",
-  description: "Reusable action",
-  inputs: {
-    version: {
-      description: "Version to install",
-      required: true,
-    },
-  },
-})
-  .addStep(checkout({}))
-  .addStep({
-    run: "echo Installing version ${{ inputs.version }}",
-  });
-
-myAction.build("my-action");
-```
-
-This generates `action.yml` in your repository.
+For a complete example, see [Composite Action Example](/examples/composite-action). For the full API, see [CompositeAction](/reference/api#compositeaction).
 
 ## CompositeJob
 
-Create reusable jobs using `CompositeJob`:
+`CompositeJob` extends `Job` and is designed to be subclassed. Use it to create reusable, parameterized job templates:
 
 ```ts twoslash
 // @filename: workflows/example.ts
@@ -318,44 +288,19 @@ import { CompositeJob, getAction, Workflow } from "../generated/index.js";
 const checkout = getAction("actions/checkout@v5");
 const setupNode = getAction("actions/setup-node@v4");
 
-// Define a reusable job class
 class NodeTestJob extends CompositeJob {
   constructor(nodeVersion: string) {
     super("ubuntu-latest");
-
     this
-      .addStep(checkout({
-        name: "Checkout code",
-      }))
-      .addStep(setupNode({
-        name: `Setup Node.js ${nodeVersion}`,
-        with: {
-          "node-version": nodeVersion,
-          cache: "npm",
-        },
-      }))
-      .addStep({
-        name: "Install dependencies",
-        run: "npm ci",
-      })
-      .addStep({
-        name: "Run tests",
-        run: "npm test",
-      });
+      .addStep(checkout({}))
+      .addStep(setupNode({ with: { "node-version": nodeVersion } }))
+      .addStep({ run: "npm ci" })
+      .addStep({ run: "npm test" });
   }
 }
-
-// Use in workflow
-const workflow = new Workflow({
-  name: "Test Matrix",
-  on: { push: { branches: ["main"] } },
-})
-  .addJob("test-node-18", new NodeTestJob("18"))
-  .addJob("test-node-20", new NodeTestJob("20"))
-  .addJob("test-node-22", new NodeTestJob("22"));
-
-workflow.build("test-matrix");
 ```
+
+For the full API reference and advanced patterns (e.g., `DeployJob`), see [CompositeJob](/reference/api#compositejob).
 
 ## Full Example: Per-environment Deploy with CallJob
 
@@ -447,49 +392,9 @@ The benefit of this structure is that deploy logic lives in `publish.yml` alone.
 
 ## Docker Actions
 
-Create [Docker container actions](https://docs.github.com/en/actions/sharing-automations/creating-actions/creating-a-docker-container-action). The `runs.using` is `"docker"`, and you specify an image and optional entrypoint.
+Create [Docker container actions](https://docs.github.com/en/actions/sharing-automations/creating-actions/creating-a-docker-container-action) using `DockerAction`. Specify a `Dockerfile` or a Docker Hub image with the `docker://` prefix.
 
-```ts twoslash
-// @noErrors
-// @filename: workflows/example.ts
-// ---cut---
-import { DockerAction } from "../generated/index.js";
-
-const action = new DockerAction(
-  {
-    name: "Lint with Super-Linter",
-    description: "Run Super-Linter in a Docker container",
-    inputs: {
-      args: {
-        description: "Linter arguments",
-        required: false,
-      },
-    },
-  },
-  {
-    using: "docker",
-    image: "Dockerfile",
-    entrypoint: "entrypoint.sh",
-    args: ["--config", ".lintrc"],
-    env: {
-      DEFAULT_BRANCH: "main",
-    },
-  },
-);
-
-action.build("super-linter");
-```
-
-This generates `.github/actions/super-linter/action.yml`. Use `CallAction.from()` to reference it in a workflow.
-
-To use a Docker Hub image directly, prefix the `image` with `docker://`:
-
-```typescript
-{
-  using: "docker",
-  image: "docker://alpine:3.19",
-}
-```
+See [DockerAction API](/reference/api#dockeraction) for the full API and examples.
 
 ## Environment Variables
 
@@ -605,33 +510,7 @@ Always review the generated YAML before committing to ensure correctness.
 
 ### 3. Type Safety
 
-Take advantage of TypeScript's type checking:
-
-```typescript
-// ❌ Type error - unknown property key
-setupNode({
-  with: {
-    "node-versoin": "20",  // Typo in key name! ❌
-  },
-});
-
-// ❌ Type error - wrong type
-setupNode({
-  with: {
-    "node-version": 20,  // Should be string! ❌
-  },
-});
-
-// ✅ Correct
-setupNode({
-  with: {
-    "node-version": "20",  // ✅ Correct key and type
-    cache: "npm",
-  },
-});
-```
-
-**Note**: While gaji provides type safety for property keys and types, it cannot validate string values (e.g., `cache: "npn"` vs `cache: "npm"`) at compile time. Always review generated YAML to catch such typos.
+gaji catches typos in action input keys and wrong value types at compile time. See [Type Safety](/reference/actions#type-safety) for examples.
 
 ## Known Limitations
 

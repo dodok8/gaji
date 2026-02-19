@@ -283,17 +283,9 @@ const action = new JavaScriptAction(
 action.build("hello-world");
 ```
 
-`.github/actions/hello-world/action.yml`이 생성됩니다.
+`.github/actions/hello-world/action.yml`이 생성됩니다. [`CallAction.from()`](#callaction)으로 워크플로우에서 참조할 수 있습니다.
 
-`CallAction.from()`으로 워크플로우에서 참조할 수 있습니다:
-
-```typescript
-const step = {
-  id: "hello",
-  ...CallAction.from(action).toJSON(),
-  with: { "who-to-greet": "Mona the Octocat" },
-};
-```
+전체 예제는 [JavaScript Action 예제](/ko/examples/javascript-action)를 참조하세요.
 
 ---
 
@@ -597,9 +589,7 @@ const setupNode = getAction("actions/setup-node@v4");
 
 // 완전한 타입 안전성으로 사용
 const step = checkout({
-  name: "Checkout code",
   with: {
-    // 입력에 대한 자동완성 사용 가능
     repository: "owner/repo",
     ref: "main",
     "fetch-depth": 0,
@@ -609,12 +599,9 @@ const step = checkout({
 // 타입이 지정된 스텝 출력 (id 필수)
 const checkoutStep = checkout({ id: "my-checkout" });
 // checkoutStep.outputs.ref → "${{ steps.my-checkout.outputs.ref }}"
-// checkoutStep.outputs.commit → "${{ steps.my-checkout.outputs.commit }}"
-
-const job = new Job("ubuntu-latest")
-  .addStep(checkoutStep)
-  .addStep({ run: `echo ${checkoutStep.outputs.ref}` });
 ```
+
+`jobOutputs()`를 활용한 전체 typed outputs 예제는 [워크플로우 작성의 출력 섹션](../guide/writing-workflows.md#출력)을 참조하세요.
 
 ---
 
@@ -632,29 +619,12 @@ function jobOutputs<O extends Record<string, string>>(
 #### 예제
 
 ```typescript
-const checkout = getAction("actions/checkout@v5");
-const step = checkout({ id: "my-checkout" });
-
-const build = new Job("ubuntu-latest")
-  .addStep(step)
-  .outputs({ ref: step.outputs.ref, sha: step.outputs.commit });
-
-// 다운스트림 job을 위한 타입이 지정된 참조 생성
 const buildOutputs = jobOutputs("build", build);
 // buildOutputs.ref → "${{ needs.build.outputs.ref }}"
 // buildOutputs.sha → "${{ needs.build.outputs.sha }}"
-
-const deploy = new Job("ubuntu-latest")
-  .needs("build")
-  .addStep({ run: `echo ${buildOutputs.ref}` });
-
-const workflow = new Workflow({
-  name: "CI",
-  on: { push: { branches: ["main"] } },
-})
-  .addJob("build", build)
-  .addJob("deploy", deploy);
 ```
+
+전체 예제는 [워크플로우 작성의 출력 섹션](../guide/writing-workflows.md#출력)을 참조하세요.
 
 ---
 

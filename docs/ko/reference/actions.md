@@ -100,6 +100,10 @@ setupNode({
 })
 ```
 
+### 제한사항
+
+gaji는 속성 키와 타입에 대한 타입 안전성을 제공하지만, 문자열 값(예: `cache: "npn"` vs `cache: "npm"`)은 컴파일 시점에 검증할 수 없습니다. 이러한 오타를 잡으려면 항상 생성된 YAML을 검토하세요.
+
 ## 일반 액션
 
 ### actions/checkout
@@ -256,21 +260,15 @@ const myAction = getAction("./my-action");
 
 ## 액션 출력
 
-후속 스텝에서 액션 출력을 사용하세요.
+액션 스텝에 `id`를 제공하면, gaji는 타입이 지정된 출력 참조를 자동으로 생성합니다:
 
 ```typescript
-const setupNode = getAction("actions/setup-node@v4");
-
-.addStep(setupNode({
-  id: "setup-node",
-  with: {
-    "node-version": "20",
-  },
-}))
-.addStep({
-  run: "echo Node path: ${{ steps.setup-node.outputs.node-path }}",
-})
+const step = checkout({ id: "my-checkout" });
+step.outputs.ref     // "${{ steps.my-checkout.outputs.ref }}"
+step.outputs.commit  // "${{ steps.my-checkout.outputs.commit }}"
 ```
+
+`jobOutputs()`를 사용한 Job 간 출력 전달에 대해서는 [출력](../guide/writing-workflows.md#출력)을 참조하세요.
 
 ## 액션 업데이트
 
