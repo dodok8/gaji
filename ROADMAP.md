@@ -131,6 +131,148 @@ new Job("ubuntu-latest")
   }));
 ```
 
+## API Design: addStep Callback vs beginSteps/endSteps
+
+Two candidate patterns for providing step context. Analysis below.
+
+### Pattern A: addStep Callback (current plan)
+
+`addStep` accepts both direct steps and callbacks. Context accumulates on the same `Job` chain.
+
+```typescript
+const checkout = getAction("actions/checkout@v5");
+const setupNode = getAction("actions/setup-node@v4");
+
+const build = new Job("ubuntu-latest", {
+    permissions: { contents: "read" },
+  })
+  .addStep(checkout({ id: "co" }))
+  .addStep(setupNode({ with: { "node-version": "20" } }))
+  .addStep((cx) => ({
+    name: "Show ref",
+    run: "echo " + cx.co.ref,
+  }))
+  .outputs((cx) => ({ ref: cx.co.ref }));
+```
+
+Type flow:
+```
+Job<{}>
+  → .addStep(checkout({ id: "co" }))      → Job<{ co: CheckoutOutputs }>
+  → .addStep(setupNode({ ... }))            → Job<{ co: CheckoutOutputs }>  (no id → no expansion)
+  → .addStep((cx) => ...)                   → Job<{ co: CheckoutOutputs }>  (cx.co.ref ✅)
+  → .outputs((cx) => ({ ref: cx.co.ref }))  → Job<{ co: CheckoutOutputs }, { ref: string }>
+```
+
+### Pattern B: beginSteps/endSteps
+
+A separate `StepBuilder` object handles step accumulation. `endSteps()` returns back to `Job` with accumulated context.
+
+```typescript
+const checkout = getAction("actions/checkout@v5");
+const setupNode = getAction("actions/setup-node@v4");
+
+const build = new Job("ubuntu-latest", {
+    permissions: { contents: "read" },
+  })
+  .beginSteps()
+    .addStep(checkout({ id: "co" }))
+    .addStep(setupNode({ with: { "node-version": "20" } }))
+    .addStep((cx) => ({
+      name: "Show ref",
+      run: "echo " + cx.co.ref,
+    }))
+  .endSteps()
+  .outputs((cx) => ({ ref: cx.co.ref }));
+```
+
+Type flow:
+```
+Job<{}>
+  → .beginSteps()                           → StepBuilder<{}>
+    → .addStep(checkout({ id: "co" }))      → StepBuilder<{ co: CheckoutOutputs }>
+    → .addStep(setupNode({ ... }))           → StepBuilder<{ co: CheckoutOutputs }>
+    → .addStep((cx) => ...)                  → StepBuilder<{ co: CheckoutOutputs }>
+  → .endSteps()                             → Job<{ co: CheckoutOutputs }>
+  → .outputs((cx) => ({ ref: cx.co.ref }))  → Job<{ co: CheckoutOutputs }, { ref: string }>
+```
+
+### Comparison
+
+| | Pattern A: addStep Callback | Pattern B: beginSteps/endSteps |
+|---|---|---|
+| **API surface** | `addStep` with 4 overloads | `addStep` (4 overloads) + `beginSteps` + `endSteps` + `StepBuilder` class |
+| **Backwards compatible** | Yes — existing `addStep(step)` unchanged | No — must wrap all steps in `beginSteps/endSteps` |
+| **Boilerplate** | None | 2 extra method calls per job |
+| **Separation of concerns** | Job config and steps mixed in same chain | Job config before `beginSteps`, steps between begin/end |
+| **Type complexity** | 4 overloads on `Job` | 4 overloads on `StepBuilder`, plus `beginSteps`/`endSteps` return types |
+| **Runtime complexity** | `_cx` tracking in `Job` | `_cx` tracking in `StepBuilder`, transfer to `Job` on `endSteps` |
+| **Workflow addJob** | Same chain: `addJob("id", (cx) => Job)` | Needs similar `beginJobs/endJobs` or inconsistent with step pattern |
+| **Existing workflow files** | No changes needed | Every `addStep` call must be wrapped |
+
+### Pattern A — Advantages
+
+1. **No breaking changes**: `job.addStep(step)` still works exactly as before
+2. **Less code**: No begin/end wrapping needed
+3. **Consistent with Workflow**: `Workflow.addJob` uses the same callback pattern — no need for a separate `JobBuilder`
+4. **Simpler runtime**: One class tracks its own context
+
+### Pattern B — Advantages
+
+1. **Explicit scope**: Clear boundary where step context is available
+2. **Enforced ordering**: Job-level config (permissions, needs) stays outside the step block
+3. **Cleaner indentation**: Step block is visually distinct from job config
+
+### Pattern B — Disadvantages
+
+1. **Breaking change**: All existing code must add `beginSteps()`/`endSteps()`
+2. **Consistency problem**: If steps use `beginSteps/endSteps`, should jobs use `beginJobs/endJobs`? That doubles the boilerplate
+3. **Extra type**: `StepBuilder<Cx>` is a new exported type that users must understand
+4. **Forgetting `endSteps()`**: Type error if you forget `.endSteps()`, but the error message is confusing ("Property 'outputs' does not exist on type 'StepBuilder'")
+5. **No benefit for simple jobs**: Jobs without context access still need the wrapping
+
+### Complex example comparison
+
+Pattern A:
+```typescript
+new Workflow({ name: "CI", on: { push: {} } })
+  .addJob("build",
+    new Job("ubuntu-latest")
+      .addStep(checkout({ id: "co" }))
+      .addStep(setupNode({ with: { "node-version": "20" } }))
+      .addStep((cx) => ({ name: "Log", run: "echo " + cx.co.ref }))
+      .outputs((cx) => ({ ref: cx.co.ref }))
+  )
+  .addJob("deploy", (cx) =>
+    new Job("ubuntu-latest")
+      .needs("build")
+      .addStep({ run: "echo " + cx.build.ref })
+  )
+  .build("ci");
+```
+
+Pattern B:
+```typescript
+new Workflow({ name: "CI", on: { push: {} } })
+  .addJob("build",
+    new Job("ubuntu-latest")
+      .beginSteps()
+        .addStep(checkout({ id: "co" }))
+        .addStep(setupNode({ with: { "node-version": "20" } }))
+        .addStep((cx) => ({ name: "Log", run: "echo " + cx.co.ref }))
+      .endSteps()
+      .outputs((cx) => ({ ref: cx.co.ref }))
+  )
+  .addJob("deploy", (cx) =>
+    new Job("ubuntu-latest")
+      .needs("build")
+      .beginSteps()
+        .addStep({ run: "echo " + cx.build.ref })
+      .endSteps()
+  )
+  .build("ci");
+```
+
 ## Type System Changes
 
 ### 1. `ActionStep` carries `Id` type
