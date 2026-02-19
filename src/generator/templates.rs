@@ -15,8 +15,9 @@ export interface JobStep {
     'timeout-minutes'?: number;
 }
 
-export interface ActionStep<O = {}> extends JobStep {
+export interface ActionStep<O = {}, Id extends string = string> extends JobStep {
     readonly outputs: O;
+    readonly id: Id;
 }
 
 export type Step = JobStep | ActionStep<any>;
@@ -200,7 +201,7 @@ export interface DockerActionRuns {
 
 pub const GET_ACTION_FALLBACK_DECL_TEMPLATE: &str = r#"
 export declare function getAction<T extends string>(ref: T): {
-    (config: { id: string; name?: string; with?: Record<string, unknown>; if?: string; env?: Record<string, string> }): ActionStep<Record<string, string>>;
+    <Id extends string>(config: { id: Id; name?: string; with?: Record<string, unknown>; if?: string; env?: Record<string, string> }): ActionStep<Record<string, string>, Id>;
     (config?: { name?: string; with?: Record<string, unknown>; id?: string; if?: string; env?: Record<string, string> }): JobStep;
 };
 "#;
@@ -238,40 +239,38 @@ export function getAction(ref) {
 "#;
 
 pub const CLASS_DECLARATIONS_TEMPLATE: &str = r#"
-export declare class Job<O extends Record<string, string> = {}> {
+export declare class Job<Cx = {}, O extends Record<string, string> = {}> {
     constructor(runsOn: string | string[], options?: Partial<JobDefinition>);
-    addStep(step: JobStep): this;
-    needs(deps: string | string[]): this;
-    env(env: Record<string, string>): this;
-    when(condition: string): this;
-    permissions(perms: Permissions): this;
-    outputs<T extends Record<string, string>>(outputs: T): Job<T>;
-    strategy(s: { matrix?: Record<string, unknown>; 'fail-fast'?: boolean; 'max-parallel'?: number }): this;
-    continueOnError(v: boolean): this;
-    timeoutMinutes(m: number): this;
+    addStep<Id extends string, StepO>(step: ActionStep<StepO, Id>): Job<Cx & Record<Id, StepO>, O>;
+    addStep(step: JobStep): Job<Cx, O>;
+    addStep<Id extends string, StepO>(stepFn: (cx: Cx) => ActionStep<StepO, Id>): Job<Cx & Record<Id, StepO>, O>;
+    addStep(stepFn: (cx: Cx) => JobStep): Job<Cx, O>;
+    outputs<T extends Record<string, string>>(outputs: T | ((cx: Cx) => T)): Job<Cx, T>;
     toJSON(): JobDefinition;
 }
 
-export declare class CompositeJob<O extends Record<string, string> = {}> extends Job<O> {
-    constructor(runsOn: string | string[], options?: Partial<JobDefinition>);
-}
-
-export declare class Workflow {
+export declare class Workflow<Cx = {}> {
     constructor(config: WorkflowConfig);
-    addJob(id: string, job: Job<any> | CompositeJob<any> | CallJob): this;
+    addJob<Id extends string, O extends Record<string, string>>(id: Id, job: Job<any, O>): Workflow<Cx & Record<Id, JobOutputs<O>>>;
+    addJob(id: string, job: Job<any, any> | WorkflowCall): Workflow<Cx>;
+    addJob<Id extends string, O extends Record<string, string>>(id: Id, jobFn: (cx: Cx) => Job<any, O>): Workflow<Cx & Record<Id, JobOutputs<O>>>;
+    addJob(id: string, jobFn: (cx: Cx) => Job<any, any> | WorkflowCall): Workflow<Cx>;
     static fromObject(def: WorkflowDefinition, id?: string): Workflow;
     toJSON(): WorkflowDefinition;
     build(id?: string): void;
 }
 
-export declare class CompositeAction {
+export declare class Action<Cx = {}> {
     constructor(config: { name: string; description: string; inputs?: Record<string, unknown>; outputs?: Record<string, unknown> });
-    addStep(step: JobStep): this;
+    addStep<Id extends string, StepO>(step: ActionStep<StepO, Id>): Action<Cx & Record<Id, StepO>>;
+    addStep(step: JobStep): Action<Cx>;
+    addStep<Id extends string, StepO>(stepFn: (cx: Cx) => ActionStep<StepO, Id>): Action<Cx & Record<Id, StepO>>;
+    addStep(stepFn: (cx: Cx) => JobStep): Action<Cx>;
     toJSON(): object;
     build(id?: string): void;
 }
 
-export declare class JavaScriptAction {
+export declare class NodeAction {
     constructor(config: JavaScriptActionConfig, runs: JavaScriptActionRuns);
     toJSON(): object;
     build(id?: string): void;
@@ -283,7 +282,7 @@ export declare class DockerAction {
     build(id?: string): void;
 }
 
-export declare class CallJob {
+export declare class WorkflowCall {
     constructor(uses: string);
     with(inputs: Record<string, unknown>): this;
     secrets(s: Record<string, unknown> | 'inherit'): this;
@@ -293,15 +292,15 @@ export declare class CallJob {
     toJSON(): object;
 }
 
-export declare class CallAction {
+export declare class ActionRef {
     constructor(uses: string);
-    static from(action: CompositeAction | JavaScriptAction | DockerAction): CallAction;
+    static from(action: Action<any> | NodeAction | DockerAction): ActionRef;
     toJSON(): JobStep;
 }
 
 export declare function jobOutputs<O extends Record<string, string>>(
     jobId: string,
-    job: Job<O>,
+    job: Job<any, O>,
 ): JobOutputs<O>;
 "#;
 
@@ -311,6 +310,7 @@ export class Job {
         if (options === undefined) options = {};
         this._runsOn = runsOn;
         this._steps = [];
+        this._cx = {};
         this._needs = options.needs;
         this._env = options.env;
         this._if = options["if"];
@@ -324,15 +324,19 @@ export class Job {
         this._container = options.container;
     }
 
-    addStep(step) { this._steps.push(step); return this; }
-    needs(deps) { this._needs = deps; return this; }
-    env(e) { this._env = e; return this; }
-    when(condition) { this._if = condition; return this; }
-    permissions(p) { this._permissions = p; return this; }
-    outputs(o) { this._outputs = o; return this; }
-    strategy(s) { this._strategy = s; return this; }
-    continueOnError(v) { this._continueOnError = v; return this; }
-    timeoutMinutes(m) { this._timeoutMinutes = m; return this; }
+    addStep(stepOrFn) {
+        var step = typeof stepOrFn === "function" ? stepOrFn(this._cx) : stepOrFn;
+        this._steps.push(step);
+        if (step.id && step.outputs) {
+            this._cx[step.id] = step.outputs;
+        }
+        return this;
+    }
+
+    outputs(outputsOrFn) {
+        this._outputs = typeof outputsOrFn === "function" ? outputsOrFn(this._cx) : outputsOrFn;
+        return this;
+    }
 
     toJSON() {
         var obj = {
@@ -363,10 +367,19 @@ export class Workflow {
         this._concurrency = config.concurrency;
         this._permissions = config.permissions;
         this._jobs = {};
+        this._cx = {};
     }
 
-    addJob(id, job) {
+    addJob(id, jobOrFn) {
+        var job = typeof jobOrFn === "function" ? jobOrFn(this._cx) : jobOrFn;
         this._jobs[id] = job;
+        if (job._outputs) {
+            var cxEntry = {};
+            for (var key in job._outputs) {
+                cxEntry[key] = "${{ needs." + id + ".outputs." + key + " }}";
+            }
+            this._cx[id] = cxEntry;
+        }
         return this;
     }
 
@@ -398,23 +411,25 @@ export class Workflow {
     }
 }
 
-export class CompositeJob extends Job {
-    constructor(runsOn, options) {
-        super(runsOn, options);
-    }
-}
-
-export class CompositeAction {
+export class Action {
     constructor(config) {
         this._name = config.name;
         this._description = config.description;
         this._inputs = config.inputs;
         this._outputs = config.outputs;
         this._steps = [];
+        this._cx = {};
         this._buildId = undefined;
     }
 
-    addStep(step) { this._steps.push(step); return this; }
+    addStep(stepOrFn) {
+        var step = typeof stepOrFn === "function" ? stepOrFn(this._cx) : stepOrFn;
+        this._steps.push(step);
+        if (step.id && step.outputs) {
+            this._cx[step.id] = step.outputs;
+        }
+        return this;
+    }
 
     toJSON() {
         var obj = {
@@ -440,7 +455,7 @@ export class CompositeAction {
     }
 }
 
-export class CallJob {
+export class WorkflowCall {
     constructor(uses) {
         this._uses = uses;
         this._with = undefined;
@@ -467,14 +482,14 @@ export class CallJob {
     }
 }
 
-export class CallAction {
+export class ActionRef {
     constructor(uses) {
         this._uses = uses;
     }
 
-    static from(compositeAction) {
-        var path = "./.github/actions/" + (compositeAction._buildId || compositeAction._name);
-        return new CallAction(path);
+    static from(action) {
+        var path = "./.github/actions/" + (action._buildId || action._name);
+        return new ActionRef(path);
     }
 
     toJSON() {
@@ -482,7 +497,7 @@ export class CallAction {
     }
 }
 
-export class JavaScriptAction {
+export class NodeAction {
     constructor(config, runs) {
         this._name = config.name;
         this._description = config.description;

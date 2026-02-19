@@ -129,9 +129,9 @@ wf2.build("workflow-2");
     }
 }
 
-/// Test CompositeJob: class inheritance to create reusable job templates.
+/// Test Job inheritance to create reusable job templates.
 #[test]
-fn test_composite_job_inheritance() {
+fn test_job_inheritance() {
     use gaji::executor;
 
     let runtime_js = format!(
@@ -141,15 +141,17 @@ fn test_composite_job_inheritance() {
 
     let runtime_stripped = strip_module_syntax(&runtime_js);
 
-    // Simulate TypeScript compiled output: class DeployJob extends CompositeJob
+    // Simulate TypeScript compiled output: class DeployJob extends Job
+    // Config methods removed — use constructor options instead
     let workflow_js = r#"
 var checkout = getAction("actions/checkout@v5");
 
-class DeployJob extends CompositeJob {
-    constructor(environment) {
-        super("ubuntu-latest");
-        this.env({ ENVIRONMENT: environment })
-            .addStep(checkout({ name: "Checkout" }))
+class DeployJob extends Job {
+    constructor(environment, options) {
+        if (options === undefined) options = {};
+        options.env = { ENVIRONMENT: environment };
+        super("ubuntu-latest", options);
+        this.addStep(checkout({ name: "Checkout" }))
             .addStep({ name: "Deploy", run: "npm run deploy:" + environment });
     }
 }
@@ -159,7 +161,7 @@ var wf = new Workflow({
     on: { push: { tags: ["v*"] } },
 })
     .addJob("deploy-staging", new DeployJob("staging"))
-    .addJob("deploy-production", new DeployJob("production").needs(["deploy-staging"]));
+    .addJob("deploy-production", new DeployJob("production", { needs: ["deploy-staging"] }));
 
 wf.build("deploy");
 "#;
@@ -214,11 +216,11 @@ fn test_composite_action_migration_roundtrip() {
 
     let runtime_stripped = strip_module_syntax(&runtime_js);
 
-    // Simulate migrated CompositeAction TypeScript (what generate_composite_action_ts would produce)
+    // Simulate migrated Action TypeScript (what generate_composite_action_ts would produce)
     let action_js = r#"
 var checkout = getAction("actions/checkout@v5");
 
-var action = new CompositeAction({
+var action = new Action({
     name: "Setup Environment",
     description: "Sets up the build environment",
     inputs: {
@@ -271,9 +273,9 @@ fn test_javascript_action_migration_roundtrip() {
 
     let runtime_stripped = strip_module_syntax(&runtime_js);
 
-    // Simulate migrated JavaScriptAction TypeScript
+    // Simulate migrated NodeAction TypeScript
     let action_js = r#"
-var action = new JavaScriptAction(
+var action = new NodeAction(
     {
         name: "My Node Action",
         description: "A test Node.js action",
@@ -510,8 +512,7 @@ var build = new Job("ubuntu-latest")
 
 var buildOutputs = jobOutputs("build", build);
 
-var deploy = new Job("ubuntu-latest")
-    .needs("build")
+var deploy = new Job("ubuntu-latest", { needs: "build" })
     .addStep({ name: "Use output", run: "echo " + buildOutputs.ref + " " + buildOutputs.sha });
 
 var wf = new Workflow({
@@ -581,8 +582,7 @@ var setup = new Job("ubuntu-latest")
 
 var setupOutputs = jobOutputs("setup", setup);
 
-var publish = new Job("ubuntu-latest")
-    .needs("setup")
+var publish = new Job("ubuntu-latest", { needs: "setup" })
     .addStep({
         name: "Publish",
         run: "publish --version " + setupOutputs.version + " --hash " + setupOutputs.commit_hash,
@@ -626,6 +626,161 @@ wf.build("manual-outputs-test");
     let yaml_str = serde_yaml::to_string(&json).unwrap();
     assert!(yaml_str.contains("needs.setup.outputs.version"));
     assert!(yaml_str.contains("steps.version.outputs.value"));
+}
+
+/// Test addStep callback receives context with previous step outputs.
+#[test]
+fn test_addstep_callback_context() {
+    use gaji::executor;
+
+    let runtime_js = format!(
+        r#"var __action_outputs = {{
+    'actions/checkout@v5': ['commit', 'ref'],
+}};
+{}
+{}"#,
+        gaji::generator::templates::GET_ACTION_RUNTIME_TEMPLATE,
+        gaji::generator::templates::JOB_WORKFLOW_RUNTIME_TEMPLATE,
+    );
+
+    let runtime_stripped = strip_module_syntax(&runtime_js);
+
+    // Use addStep callback to access previous step outputs via cx
+    let workflow_js = r#"
+var checkout = getAction("actions/checkout@v5");
+
+var build = new Job("ubuntu-latest")
+    .addStep(checkout({ id: "co" }))
+    .addStep(function(cx) {
+        return { name: "Use ref", run: "echo " + cx.co.ref };
+    });
+
+var wf = new Workflow({
+    name: "Callback Test",
+    on: { push: {} },
+}).addJob("build", build);
+
+wf.build("callback-test");
+"#;
+
+    let bundled = format!("{}\n\n{}", runtime_stripped, workflow_js);
+    let outputs = executor::execute_js(&bundled).unwrap();
+
+    assert_eq!(outputs.len(), 1);
+    let json: serde_json::Value = serde_json::from_str(&outputs[0].json).unwrap();
+
+    let steps = json["jobs"]["build"]["steps"].as_array().unwrap();
+    assert_eq!(steps.len(), 2);
+    assert_eq!(steps[1]["run"], "echo ${{ steps.co.outputs.ref }}");
+}
+
+/// Test outputs() callback receives context with step outputs.
+#[test]
+fn test_outputs_callback_context() {
+    use gaji::executor;
+
+    let runtime_js = format!(
+        r#"var __action_outputs = {{
+    'actions/checkout@v5': ['commit', 'ref'],
+}};
+{}
+{}"#,
+        gaji::generator::templates::GET_ACTION_RUNTIME_TEMPLATE,
+        gaji::generator::templates::JOB_WORKFLOW_RUNTIME_TEMPLATE,
+    );
+
+    let runtime_stripped = strip_module_syntax(&runtime_js);
+
+    // Use outputs() callback to access step outputs via cx
+    let workflow_js = r#"
+var checkout = getAction("actions/checkout@v5");
+
+var build = new Job("ubuntu-latest")
+    .addStep(checkout({ id: "co" }))
+    .outputs(function(cx) {
+        return { ref: cx.co.ref, sha: cx.co.commit };
+    });
+
+var wf = new Workflow({
+    name: "Outputs Callback Test",
+    on: { push: {} },
+}).addJob("build", build);
+
+wf.build("outputs-callback-test");
+"#;
+
+    let bundled = format!("{}\n\n{}", runtime_stripped, workflow_js);
+    let outputs = executor::execute_js(&bundled).unwrap();
+
+    assert_eq!(outputs.len(), 1);
+    let json: serde_json::Value = serde_json::from_str(&outputs[0].json).unwrap();
+
+    let build_outputs = &json["jobs"]["build"]["outputs"];
+    assert_eq!(build_outputs["ref"], "${{ steps.co.outputs.ref }}");
+    assert_eq!(build_outputs["sha"], "${{ steps.co.outputs.commit }}");
+}
+
+/// Test Workflow.addJob callback receives context with previous job outputs,
+/// replacing the standalone jobOutputs() pattern.
+#[test]
+fn test_addjob_callback_context() {
+    use gaji::executor;
+
+    let runtime_js = format!(
+        r#"var __action_outputs = {{
+    'actions/checkout@v5': ['commit', 'ref'],
+}};
+{}
+{}"#,
+        gaji::generator::templates::GET_ACTION_RUNTIME_TEMPLATE,
+        gaji::generator::templates::JOB_WORKFLOW_RUNTIME_TEMPLATE,
+    );
+
+    let runtime_stripped = strip_module_syntax(&runtime_js);
+
+    // Use addJob callback to access previous job outputs via cx
+    let workflow_js = r#"
+var checkout = getAction("actions/checkout@v5");
+
+var wf = new Workflow({
+    name: "Job Context Test",
+    on: { push: {} },
+})
+    .addJob("build",
+        new Job("ubuntu-latest")
+            .addStep(checkout({ id: "co" }))
+            .outputs(function(cx) {
+                return { ref: cx.co.ref, sha: cx.co.commit };
+            })
+    )
+    .addJob("deploy", function(cx) {
+        return new Job("ubuntu-latest", { needs: "build" })
+            .addStep({ name: "Deploy", run: "echo " + cx.build.ref + " " + cx.build.sha });
+    });
+
+wf.build("job-context-test");
+"#;
+
+    let bundled = format!("{}\n\n{}", runtime_stripped, workflow_js);
+    let outputs = executor::execute_js(&bundled).unwrap();
+
+    assert_eq!(outputs.len(), 1);
+    let json: serde_json::Value = serde_json::from_str(&outputs[0].json).unwrap();
+
+    // Verify build job outputs
+    let build_outputs = &json["jobs"]["build"]["outputs"];
+    assert_eq!(build_outputs["ref"], "${{ steps.co.outputs.ref }}");
+    assert_eq!(build_outputs["sha"], "${{ steps.co.outputs.commit }}");
+
+    // Verify deploy job uses needs expressions from cx
+    let deploy_steps = json["jobs"]["deploy"]["steps"].as_array().unwrap();
+    assert_eq!(
+        deploy_steps[0]["run"],
+        "echo ${{ needs.build.outputs.ref }} ${{ needs.build.outputs.sha }}"
+    );
+
+    // Verify deploy job has needs
+    assert_eq!(json["jobs"]["deploy"]["needs"], "build");
 }
 
 /// Test WorkflowBuilder.build_all with an empty directory.

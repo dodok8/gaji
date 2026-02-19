@@ -90,7 +90,7 @@ The core pipeline is: **TypeScript → Parse → Execute → YAML**
 
 ## Key Design Patterns
 
-- **Builder pattern**: `WorkflowBuilder`, `Job`, `CompositeJob`, `Workflow`, `CallJob`, `CallAction`, `CompositeAction`, `JavaScriptAction`
+- **Builder pattern**: `WorkflowBuilder`, `Job`, `Workflow`, `WorkflowCall`, `ActionRef`, `Action`, `NodeAction`
 - **Visitor pattern**: `ActionRefExtractor` traverses oxc AST nodes
 - **Error handling**: `anyhow::Result<T>` with `?` propagation throughout; `thiserror` for typed errors
 - **Async**: Tokio runtime for all I/O-bound operations (HTTP, filesystem)
@@ -173,9 +173,9 @@ The release binary is optimized for size (important for npm distribution):
 
 **Adding support for a new action.yml field**: Update `fetcher.rs` for parsing, `generator/types.rs` for type generation, and `generator/templates.rs` if base types need changes.
 
-**Adding a new action type** (like `JavaScriptAction`): Add runtime class to `generator/templates.rs` (`JOB_WORKFLOW_RUNTIME_TEMPLATE`), add TypeScript interfaces to `BASE_TYPES_TEMPLATE`, add type declaration in `generator/mod.rs` (`generate_index_dts`). Output type "action" writes to `.github/actions/<id>/action.yml`.
+**Adding a new action type** (like `NodeAction`): Add runtime class to `generator/templates.rs` (`JOB_WORKFLOW_RUNTIME_TEMPLATE`), add TypeScript interfaces to `BASE_TYPES_TEMPLATE`, add type declaration in `generator/mod.rs` (`generate_index_dts`). Output type "action" writes to `.github/actions/<id>/action.yml`.
 
-**Adding a new job type** (like `CompositeJob`): Add runtime class to `generator/templates.rs` (`JOB_WORKFLOW_RUNTIME_TEMPLATE`), add type declaration in `generator/mod.rs` (`generate_index_dts`). Job types that extend `Job` inherit its `toJSON()` and produce standard `JobDefinition` output.
+**Extending Job**: Users can extend `Job` directly for reusable job templates. Pass configuration through the constructor `options` parameter. Only `addStep()` and `outputs()` are chainable methods.
 
 **Modifying the build pipeline**: Core logic is in `builder.rs` (orchestration) and `executor.rs` (JS execution). The executor strips types with oxc and runs the result in QuickJS.
 
@@ -186,12 +186,12 @@ The TypeScript runtime classes in `generator/templates.rs` follow this hierarchy
 | Class | Purpose | Output Type | Build Target |
 |-------|---------|-------------|--------------|
 | `Job` | Standard workflow job | `JobDefinition` | Part of `Workflow` |
-| `CompositeJob` | Reusable job template (extends `Job`) | `JobDefinition` | Part of `Workflow` |
 | `Workflow` | Complete workflow | `WorkflowDefinition` | `.github/workflows/<id>.yml` |
-| `CompositeAction` | Reusable composite action | `action.yml` (composite) | `.github/actions/<id>/action.yml` |
-| `JavaScriptAction` | Node.js-based action | `action.yml` (node) | `.github/actions/<id>/action.yml` |
-| `CallJob` | Reusable workflow call (no steps) | `{ uses: ... }` | Part of `Workflow` |
-| `CallAction` | Reference to local action | `{ uses: "./.github/actions/<id>" }` | Step in a `Job` |
+| `Action` | Reusable composite action | `action.yml` (composite) | `.github/actions/<id>/action.yml` |
+| `NodeAction` | Node.js-based action | `action.yml` (node) | `.github/actions/<id>/action.yml` |
+| `DockerAction` | Docker-based action | `action.yml` (docker) | `.github/actions/<id>/action.yml` |
+| `WorkflowCall` | Reusable workflow call (no steps) | `{ uses: ... }` | Part of `Workflow` |
+| `ActionRef` | Reference to local action | `{ uses: "./.github/actions/<id>" }` | Step in a `Job` |
 
 ## Files to Never Edit Manually
 

@@ -11,7 +11,8 @@ Represents a GitHub Actions workflow.
 ```typescript
 class Workflow {
   constructor(config: WorkflowConfig)
-  addJob(id: string, job: Job<any> | CompositeJob<any> | CallJob): this
+  addJob(id: string, job: Job<any> | WorkflowCall): this
+  addJob(id: string, factory: (cx: WorkflowContext) => Job<any> | WorkflowCall): this
   static fromObject(def: WorkflowDefinition, id?: string): Workflow
   build(filename?: string): void
   toJSON(): WorkflowDefinition
@@ -20,7 +21,7 @@ class Workflow {
 
 | Method | Description |
 |--------|-------------|
-| `addJob(id, job)` | Add a job to the workflow. Accepts `Job`, `CompositeJob`, or `CallJob`. |
+| `addJob(id, job)` | Add a job to the workflow. Accepts `Job` or `WorkflowCall`. Also accepts a callback `(cx) => Job | WorkflowCall` for context-dependent jobs. |
 | `fromObject(def, id?)` | Create a Workflow from a raw `WorkflowDefinition` object. Useful for wrapping existing YAML-like definitions. |
 | `build(filename?)` | Compile the workflow to YAML. |
 | `toJSON()` | Serialize to a `WorkflowDefinition` object. |
@@ -83,37 +84,33 @@ Represents a job in a workflow. The type parameter `O` tracks the job's output k
 class Job<O extends Record<string, string> = {}> {
   constructor(runsOn: string | string[], options?: Partial<JobDefinition>)
   addStep(step: Step): this
-  needs(jobs: string | string[]): this
-  env(variables: Record<string, string>): this
-  when(condition: string): this
-  permissions(perms: Permissions): this
+  addStep(factory: (cx: StepContext) => Step): this
   outputs<T extends Record<string, string>>(outputs: T): Job<T>
-  strategy(strategy: JobStrategy): this
-  continueOnError(v: boolean): this
-  timeoutMinutes(m: number): this
+  outputs<T extends Record<string, string>>(factory: (cx: StepContext) => T): Job<T>
   toJSON(): JobDefinition
 }
 ```
 
 | Method | Description |
 |--------|-------------|
-| `addStep(step)` | Append a step to the job. |
-| `needs(jobs)` | Set job dependencies. |
-| `env(variables)` | Set environment variables. |
-| `when(condition)` | Set the job's `if` condition (e.g., `"github.ref == 'refs/heads/main'"`). |
-| `permissions(perms)` | Set job-level permissions (e.g., `{ contents: 'read' }`). |
-| `outputs(outputs)` | Define job outputs. Returns `Job<T>` where `T` captures the output keys. |
-| `strategy(strategy)` | Set matrix strategy. |
-| `continueOnError(v)` | Set the `continue-on-error` flag. |
-| `timeoutMinutes(m)` | Set the `timeout-minutes` value. |
+| `addStep(step)` | Append a step to the job. Also accepts a callback `(cx) => Step` where `cx.prevStep` gives access to the previous step's output. |
+| `outputs(outputs)` | Define job outputs. Returns `Job<T>` where `T` captures the output keys. Also accepts a callback `(cx) => T`. |
 | `toJSON()` | Serialize to a `JobDefinition` object. |
 
-The optional `options` parameter in the constructor allows setting all job options at once:
+All job configuration (needs, env, if, permissions, strategy, continue-on-error, timeout-minutes) is set through the `options` parameter in the constructor:
 
 ```typescript
 const job = new Job("ubuntu-latest", {
   needs: ["test"],
   env: { NODE_ENV: "production" },
+  if: "github.event_name == 'push'",
+  permissions: { contents: "read" },
+  strategy: {
+    matrix: {
+      node: ["18", "20", "22"],
+    },
+  },
+  "continue-on-error": false,
   "timeout-minutes": 30,
 });
 ```
@@ -121,45 +118,44 @@ const job = new Job("ubuntu-latest", {
 #### Example
 
 ```typescript
-const job = new Job("ubuntu-latest")
-  .needs(["test"])
-  .env({
-    NODE_ENV: "production",
-  })
-  .when("github.event_name == 'push'")
-  .permissions({ contents: "read" })
-  .strategy({
+const job = new Job("ubuntu-latest", {
+  needs: ["test"],
+  env: { NODE_ENV: "production" },
+  if: "github.event_name == 'push'",
+  permissions: { contents: "read" },
+  strategy: {
     matrix: {
       node: ["18", "20", "22"],
     },
-  })
+  },
+  "continue-on-error": false,
+  "timeout-minutes": 30,
+})
+  .addStep(checkout({}))
+  .addStep({ run: "npm test" })
   .outputs({
     version: "${{ steps.version.outputs.value }}",
-  })
-  .continueOnError(false)
-  .timeoutMinutes(30)
-  .addStep(checkout({}))
-  .addStep({ run: "npm test" });
+  });
 ```
 
 ---
 
-### `CompositeAction`
+### `Action`
 
 Create reusable [composite actions](https://docs.github.com/en/actions/sharing-automations/creating-actions/creating-a-composite-action).
 
 ```typescript
-class CompositeAction {
-  constructor(config: CompositeActionConfig)
+class Action {
+  constructor(config: ActionConfig)
   addStep(step: Step): this
   build(filename: string): void
 }
 ```
 
-#### `CompositeActionConfig`
+#### `ActionConfig`
 
 ```typescript
-interface CompositeActionConfig {
+interface ActionConfig {
   name: string
   description: string
   inputs?: Record<string, ActionInput>
@@ -172,12 +168,12 @@ interface CompositeActionConfig {
 ```ts twoslash
 // @filename: workflows/example.ts
 // ---cut---
-import { CompositeAction, getAction } from "../generated/index.js";
+import { Action, getAction } from "../generated/index.js";
 
 const checkout = getAction("actions/checkout@v5");
 const setupNode = getAction("actions/setup-node@v4");
 
-const setupEnv = new CompositeAction({
+const setupEnv = new Action({
   name: "Setup Environment",
   description: "Setup Node.js and install dependencies",
   inputs: {
@@ -217,21 +213,21 @@ const job = new Job("ubuntu-latest")
 
 ---
 
-### `JavaScriptAction`
+### `NodeAction`
 
 Create [Node.js-based GitHub Actions](https://docs.github.com/en/actions/sharing-automations/creating-actions/creating-a-javascript-action).
 
 ```typescript
-class JavaScriptAction {
-  constructor(config: JavaScriptActionConfig, runs: JavaScriptActionRuns)
+class NodeAction {
+  constructor(config: NodeActionConfig, runs: NodeActionRuns)
   build(filename: string): void
 }
 ```
 
-#### `JavaScriptActionConfig`
+#### `NodeActionConfig`
 
 ```typescript
-interface JavaScriptActionConfig {
+interface NodeActionConfig {
   name: string
   description: string
   inputs?: Record<string, ActionInputDefinition>
@@ -239,10 +235,10 @@ interface JavaScriptActionConfig {
 }
 ```
 
-#### `JavaScriptActionRuns`
+#### `NodeActionRuns`
 
 ```typescript
-interface JavaScriptActionRuns {
+interface NodeActionRuns {
   using: 'node12' | 'node16' | 'node20'
   main: string
   pre?: string
@@ -257,9 +253,9 @@ interface JavaScriptActionRuns {
 ```ts twoslash
 // @filename: workflows/example.ts
 // ---cut---
-import { JavaScriptAction } from "../generated/index.js";
+import { NodeAction } from "../generated/index.js";
 
-const action = new JavaScriptAction(
+const action = new NodeAction(
   {
     name: "Hello World",
     description: "Greet someone and record the time",
@@ -285,7 +281,7 @@ const action = new JavaScriptAction(
 action.build("hello-world");
 ```
 
-This generates `.github/actions/hello-world/action.yml`. Use [`CallAction.from()`](#callaction) to reference it in a workflow.
+This generates `.github/actions/hello-world/action.yml`. Use [`ActionRef.from()`](#actionref) to reference it in a workflow.
 
 For a complete example with workflow integration, see [JavaScript Action Example](/examples/javascript-action).
 

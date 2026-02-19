@@ -11,7 +11,7 @@ GitHub Actions 워크플로우를 표현합니다.
 ```typescript
 class Workflow {
   constructor(config: WorkflowConfig)
-  addJob(id: string, job: Job<any> | CompositeJob<any> | CallJob): this
+  addJob(id: string, job: Job<any> | WorkflowCall): this
   static fromObject(def: WorkflowDefinition, id?: string): Workflow
   build(filename?: string): void
   toJSON(): WorkflowDefinition
@@ -20,7 +20,7 @@ class Workflow {
 
 | 메서드 | 설명 |
 |--------|------|
-| `addJob(id, job)` | 워크플로우에 job을 추가합니다. `Job`, `CompositeJob`, `CallJob`을 받습니다. |
+| `addJob(id, job)` | 워크플로우에 job을 추가합니다. `Job`, `WorkflowCall`을 받습니다. |
 | `fromObject(def, id?)` | `WorkflowDefinition` 객체로부터 Workflow를 생성합니다. 기존 YAML 형태의 정의를 래핑할 때 유용합니다. |
 | `build(filename?)` | 워크플로우를 YAML로 컴파일합니다. |
 | `toJSON()` | `WorkflowDefinition` 객체로 직렬화합니다. |
@@ -83,14 +83,7 @@ workflow.build("raw");
 class Job<O extends Record<string, string> = {}> {
   constructor(runsOn: string | string[], options?: Partial<JobDefinition>)
   addStep(step: Step): this
-  needs(jobs: string | string[]): this
-  env(variables: Record<string, string>): this
-  when(condition: string): this
-  permissions(perms: Permissions): this
   outputs<T extends Record<string, string>>(outputs: T): Job<T>
-  strategy(strategy: JobStrategy): this
-  continueOnError(v: boolean): this
-  timeoutMinutes(m: number): this
   toJSON(): JobDefinition
 }
 ```
@@ -98,22 +91,23 @@ class Job<O extends Record<string, string> = {}> {
 | 메서드 | 설명 |
 |--------|------|
 | `addStep(step)` | job에 스텝을 추가합니다. |
-| `needs(jobs)` | job 의존성을 설정합니다. |
-| `env(variables)` | 환경 변수를 설정합니다. |
-| `when(condition)` | job의 `if` 조건을 설정합니다 (예: `"github.ref == 'refs/heads/main'"`). |
-| `permissions(perms)` | job 수준의 권한을 설정합니다 (예: `{ contents: 'read' }`). |
 | `outputs(outputs)` | job 출력을 정의합니다. 출력 키를 캡처한 `Job<T>`를 반환합니다. |
-| `strategy(strategy)` | 매트릭스 전략을 설정합니다. |
-| `continueOnError(v)` | `continue-on-error` 플래그를 설정합니다. |
-| `timeoutMinutes(m)` | `timeout-minutes` 값을 설정합니다. |
 | `toJSON()` | `JobDefinition` 객체로 직렬화합니다. |
 
-생성자의 `options` 파라미터로 모든 옵션을 한번에 설정할 수 있습니다:
+모든 설정은 생성자의 `options` 파라미터로 지정합니다:
 
 ```typescript
 const job = new Job("ubuntu-latest", {
   needs: ["test"],
   env: { NODE_ENV: "production" },
+  if: "github.event_name == 'push'",
+  permissions: { contents: "read" },
+  strategy: {
+    matrix: {
+      node: ["18", "20", "22"],
+    },
+  },
+  "continue-on-error": false,
   "timeout-minutes": 30,
 });
 ```
@@ -121,23 +115,24 @@ const job = new Job("ubuntu-latest", {
 #### 예제
 
 ```typescript
-const job = new Job("ubuntu-latest")
-  .needs(["test"])
-  .env({
+const job = new Job("ubuntu-latest", {
+  needs: ["test"],
+  env: {
     NODE_ENV: "production",
-  })
-  .when("github.event_name == 'push'")
-  .permissions({ contents: "read" })
-  .strategy({
+  },
+  if: "github.event_name == 'push'",
+  permissions: { contents: "read" },
+  strategy: {
     matrix: {
       node: ["18", "20", "22"],
     },
-  })
+  },
+  "continue-on-error": false,
+  "timeout-minutes": 30,
+})
   .outputs({
     version: "${{ steps.version.outputs.value }}",
   })
-  .continueOnError(false)
-  .timeoutMinutes(30)
   .addStep(checkout({}))
   .addStep({ run: "npm test" });
 ```

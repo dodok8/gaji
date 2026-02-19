@@ -11,6 +11,8 @@ The current API requires storing step/job references in variables to access outp
 
 3. **TypeScript configuration**: `.gaji.toml` / `.gaji.local.toml` are replaced by `gaji.config.ts` / `gaji.config.local.ts`. Configuration becomes type-safe with autocomplete.
 
+4. **Constructor-only config**: Job config methods (`needs()`, `timeoutMinutes()`, `permissions()`, etc.) are removed. All configuration goes through the constructor options. This prevents `timeoutMinutes(30).addStep(...).timeoutMinutes(15)` antipattern at the type level. Only `addStep()` and `outputs()` remain as chainable methods.
+
 ## Class Naming Changes
 
 | Current | New | Notes |
@@ -294,18 +296,25 @@ export declare function getAction(ref: 'actions/checkout@v5'): {
 };
 ```
 
-### 3. `Job<Cx, O>` tracks step context
+### 3. `Job<Cx, O>` tracks step context (constructor-only config)
 
 ```typescript
 export declare class Job<Cx = {}, O extends Record<string, string> = {}> {
+    constructor(runsOn: string | string[], options?: Partial<JobDefinition>);
+
     addStep<Id extends string, StepO>(step: ActionStep<StepO, Id>): Job<Cx & Record<Id, StepO>, O>;
     addStep(step: JobStep): Job<Cx, O>;
     addStep<Id extends string, StepO>(stepFn: (cx: Cx) => ActionStep<StepO, Id>): Job<Cx & Record<Id, StepO>, O>;
     addStep(stepFn: (cx: Cx) => JobStep): Job<Cx, O>;
     outputs<T extends Record<string, string>>(outputs: T | ((cx: Cx) => T)): Job<Cx, T>;
-    // ... other methods return this
+    toJSON(): JobDefinition;
+
+    // NO config methods: needs(), env(), when(), permissions(), timeoutMinutes(), etc.
+    // All config goes through constructor options only.
 }
 ```
+
+Config methods like `needs()`, `env()`, `when()`, `permissions()`, `strategy()`, `continueOnError()`, `timeoutMinutes()` are removed. All job configuration must go through the constructor `options` parameter, preventing interleaving config calls with `addStep()` calls.
 
 ### 4. `Workflow<Cx>` tracks job context
 

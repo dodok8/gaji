@@ -194,13 +194,13 @@ impl TypeGenerator {
         for info in &sorted_infos {
             if info.has_outputs {
                 // Actions WITH outputs: callable interface with two overloads
-                // First overload requires id → returns ActionStep<Outputs>
+                // First overload requires id with literal type → returns ActionStep<Outputs, Id>
                 // Second overload has optional id → returns JobStep
                 content.push_str(&format!(
                     r#"export declare function getAction(
     ref: '{}'
 ): {{
-    (config: {{ id: string; name?: string; with?: {}Inputs; if?: string; env?: Record<string, string> }}): ActionStep<{}Outputs>;
+    <Id extends string>(config: {{ id: Id; name?: string; with?: {}Inputs; if?: string; env?: Record<string, string> }}): ActionStep<{}Outputs, Id>;
     (config?: {{ name?: string; with?: {}Inputs; id?: string; if?: string; env?: Record<string, string> }}): JobStep;
 }};
 "#,
@@ -285,7 +285,7 @@ impl TypeGenerator {
         // getAction runtime (from template)
         content.push_str(GET_ACTION_RUNTIME_TEMPLATE);
 
-        // Job/Workflow/CompositeAction/CallJob/CallAction runtime classes (from template)
+        // Job/Workflow/Action/WorkflowCall/ActionRef/NodeAction runtime classes (from template)
         content.push_str(JOB_WORKFLOW_RUNTIME_TEMPLATE);
         content.push('\n');
 

@@ -6,8 +6,7 @@ const rustCache = getAction("Swatinem/rust-cache@v2");
 const miseAction = getAction("jdx/mise-action@v2");
 const ghPages = getAction("peaceiris/actions-gh-pages@v4");
 
-const deploy = new Job("ubuntu-latest")
-  .permissions({ contents: "write" })
+const deploy = new Job("ubuntu-latest", { permissions: { contents: "write" } })
   .addStep(checkout({ with: { "fetch-depth": 0 } }))
   .addStep(rustToolchain({}))
   .addStep(rustCache({}))
