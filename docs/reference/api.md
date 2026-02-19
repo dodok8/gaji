@@ -285,17 +285,9 @@ const action = new JavaScriptAction(
 action.build("hello-world");
 ```
 
-This generates `.github/actions/hello-world/action.yml`.
+This generates `.github/actions/hello-world/action.yml`. Use [`CallAction.from()`](#callaction) to reference it in a workflow.
 
-Use `CallAction.from()` to reference it in a workflow:
-
-```typescript
-const step = {
-  id: "hello",
-  ...CallAction.from(action).toJSON(),
-  with: { "who-to-greet": "Mona the Octocat" },
-};
-```
+For a complete example with workflow integration, see [JavaScript Action Example](/examples/javascript-action).
 
 ---
 
@@ -599,13 +591,10 @@ function getAction<T extends string>(ref: T): {
 
 ```typescript
 const checkout = getAction("actions/checkout@v5");
-const setupNode = getAction("actions/setup-node@v4");
 
 // Use with full type safety
 const step = checkout({
-  name: "Checkout code",
   with: {
-    // Autocomplete available for inputs
     repository: "owner/repo",
     ref: "main",
     "fetch-depth": 0,
@@ -615,12 +604,9 @@ const step = checkout({
 // Typed step outputs (requires id)
 const checkoutStep = checkout({ id: "my-checkout" });
 // checkoutStep.outputs.ref → "${{ steps.my-checkout.outputs.ref }}"
-// checkoutStep.outputs.commit → "${{ steps.my-checkout.outputs.commit }}"
-
-const job = new Job("ubuntu-latest")
-  .addStep(checkoutStep)
-  .addStep({ run: `echo ${checkoutStep.outputs.ref}` });
 ```
+
+For a complete typed outputs example with `jobOutputs()`, see [Outputs in Writing Workflows](../guide/writing-workflows.md#outputs).
 
 ---
 
@@ -638,29 +624,12 @@ function jobOutputs<O extends Record<string, string>>(
 #### Example
 
 ```typescript
-const checkout = getAction("actions/checkout@v5");
-const step = checkout({ id: "my-checkout" });
-
-const build = new Job("ubuntu-latest")
-  .addStep(step)
-  .outputs({ ref: step.outputs.ref, sha: step.outputs.commit });
-
-// Create typed references for downstream jobs
 const buildOutputs = jobOutputs("build", build);
 // buildOutputs.ref → "${{ needs.build.outputs.ref }}"
 // buildOutputs.sha → "${{ needs.build.outputs.sha }}"
-
-const deploy = new Job("ubuntu-latest")
-  .needs("build")
-  .addStep({ run: `echo ${buildOutputs.ref}` });
-
-const workflow = new Workflow({
-  name: "CI",
-  on: { push: { branches: ["main"] } },
-})
-  .addJob("build", build)
-  .addJob("deploy", deploy);
 ```
+
+For a complete example, see [Outputs in Writing Workflows](../guide/writing-workflows.md#outputs).
 
 ---
 

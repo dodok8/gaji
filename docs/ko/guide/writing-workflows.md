@@ -79,7 +79,7 @@ const step = checkout({
 
 ## CompositeJob
 
-`CompositeJob`을 사용하여 재사용 가능한 Job을 정의할 수 있습니다.
+`CompositeJob`은 `Job`을 상속하며, 서브클래싱을 통해 재사용 가능한 파라미터화된 Job 템플릿을 만들 때 사용합니다:
 
 ```ts twoslash
 // @noErrors
@@ -90,34 +90,19 @@ import { CompositeJob, getAction } from "../generated/index.js";
 const checkout = getAction("actions/checkout@v5");
 const setupNode = getAction("actions/setup-node@v4");
 
-// 재사용 가능한 작업 클래스 정의
 class NodeTestJob extends CompositeJob {
   constructor(nodeVersion: string) {
     super("ubuntu-latest");
-
     this
-      .addStep(checkout({ name: "Checkout code" }))
-      .addStep(setupNode({
-        name: `Setup Node.js ${nodeVersion}`,
-        with: {
-          "node-version": nodeVersion,
-          cache: "npm",
-        },
-      }))
-      .addStep({ name: "Install dependencies", run: "npm ci" })
-      .addStep({ name: "Run tests", run: "npm test" });
+      .addStep(checkout({}))
+      .addStep(setupNode({ with: { "node-version": nodeVersion } }))
+      .addStep({ run: "npm ci" })
+      .addStep({ run: "npm test" });
   }
 }
-
-// 워크플로우에서 사용
-const workflow = new Workflow({
-  name: "Test Matrix",
-  on: { push: { branches: ["main"] } },
-})
-  .addJob("test-node-18", new NodeTestJob("18"))
-  .addJob("test-node-20", new NodeTestJob("20"))
-  .addJob("test-node-22", new NodeTestJob("22"));
 ```
+
+전체 API 레퍼런스와 고급 패턴(예: `DeployJob`)은 [CompositeJob](/ko/reference/api#compositejob)을 참조하세요.
 
 ## 전체 예제: CallJob과 조합하여 환경별 배포 워크플로우 구성
 
@@ -209,49 +194,9 @@ workflow.build("release");
 
 ## DockerAction
 
-[Docker 컨테이너 액션](https://docs.github.com/en/actions/sharing-automations/creating-actions/creating-a-docker-container-action)을 정의합니다. `runs.using`이 `"docker"`이며, 이미지와 entrypoint를 지정합니다.
+`DockerAction`으로 [Docker 컨테이너 액션](https://docs.github.com/en/actions/sharing-automations/creating-actions/creating-a-docker-container-action)을 정의합니다. `Dockerfile` 또는 `docker://` 접두사를 붙인 Docker Hub 이미지를 지정할 수 있습니다.
 
-```ts twoslash
-// @noErrors
-// @filename: workflows/example.ts
-// ---cut---
-import { DockerAction } from "../generated/index.js";
-
-const action = new DockerAction(
-  {
-    name: "Lint with Super-Linter",
-    description: "Run Super-Linter in a Docker container",
-    inputs: {
-      args: {
-        description: "Linter arguments",
-        required: false,
-      },
-    },
-  },
-  {
-    using: "docker",
-    image: "Dockerfile",
-    entrypoint: "entrypoint.sh",
-    args: ["--config", ".lintrc"],
-    env: {
-      DEFAULT_BRANCH: "main",
-    },
-  },
-);
-
-action.build("super-linter");
-```
-
-`DockerAction`은 `.github/actions/<id>/action.yml`을 생성합니다. `CallAction.from()`으로 워크플로우에서 참조할 수 있습니다.
-
-Docker Hub 이미지를 직접 사용하려면 `image`에 `docker://` 접두사를 붙입니다:
-
-```typescript
-{
-  using: "docker",
-  image: "docker://alpine:3.19",
-}
-```
+전체 API와 예제는 [DockerAction API](/ko/reference/api#dockeraction)를 참조하세요.
 
 ## 출력
 
@@ -333,33 +278,7 @@ const deploy = new Job("ubuntu-latest")
 
 ### 3. 타입 안전성
 
-TypeScript의 타입 체크를 활용하세요:
-
-```typescript
-// ❌ 타입 오류 - 알 수 없는 속성 키
-setupNode({
-  with: {
-    "node-versoin": "20",  // 키 이름 오타! ❌
-  },
-});
-
-// ❌ 타입 오류 - 잘못된 타입
-setupNode({
-  with: {
-    "node-version": 20,  // 문자열이어야 함! ❌
-  },
-});
-
-// ✅ 올바름
-setupNode({
-  with: {
-    "node-version": "20",  // ✅ 올바른 키와 타입
-    cache: "npm",
-  },
-});
-```
-
-**참고**: gaji는 속성 키와 타입에 대한 타입 안전성을 제공하지만, 문자열 값(예: `cache: "npn"` vs `cache: "npm"`)은 컴파일 시점에 검증할 수 없습니다. 이러한 오타를 잡으려면 항상 생성된 YAML을 검토하세요.
+gaji는 액션 입력 키의 오타와 잘못된 값 타입을 컴파일 시점에 잡아냅니다. 예제는 [타입 안전성](/ko/reference/actions#타입-안전성)을 참조하세요.
 
 ## 알려진 제한사항
 

@@ -102,6 +102,10 @@ setupNode({
 })
 ```
 
+### Limitations
+
+While gaji provides type safety for property keys and types, it cannot validate string values (e.g., `cache: "npn"` vs `cache: "npm"`) at compile time. Always review generated YAML to catch such typos.
+
 ## Common Actions
 
 ### actions/checkout
@@ -258,21 +262,15 @@ Make sure to create the action first. See [CompositeAction](./api.md#compositeac
 
 ## Action Outputs
 
-Use action outputs in subsequent steps.
+When you provide an `id` to an action step, gaji automatically generates typed output references:
 
 ```typescript
-const setupNode = getAction("actions/setup-node@v4");
-
-.addStep(setupNode({
-  id: "setup-node",
-  with: {
-    "node-version": "20",
-  },
-}))
-.addStep({
-  run: "echo Node path: ${{ steps.setup-node.outputs.node-path }}",
-})
+const step = checkout({ id: "my-checkout" });
+step.outputs.ref     // "${{ steps.my-checkout.outputs.ref }}"
+step.outputs.commit  // "${{ steps.my-checkout.outputs.commit }}"
 ```
+
+For passing outputs between jobs with `jobOutputs()`, see [Outputs](../guide/writing-workflows.md#outputs).
 
 ## Updating Actions
 
