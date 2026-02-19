@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.1](https://github.com/dodok8/gaji/compare/v0.5.0...v0.5.1) - 2026-02-19
+
+### Added
+
+- use config-based defaults for dev/build input and output paths ([#55](https://github.com/dodok8/gaji/pull/55))
+
+### Other
+
+- remove duplicated ([#56](https://github.com/dodok8/gaji/pull/56))
+- apply v-pre
+
 ## [0.5.0](https://github.com/dodok8/gaji/compare/v0.4.4...v0.5.0) - 2026-02-16
 
 ### Added
