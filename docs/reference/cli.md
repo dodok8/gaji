@@ -139,6 +139,52 @@ Validation and formatting options are configured via `.gaji.toml`, not CLI flags
 
 ---
 
+### `gaji list`
+
+List all GitHub Actions used in workflow files.
+
+```bash
+gaji list [OPTIONS]
+```
+
+**Options.**
+
+| Option | Description |
+|--------|-------------|
+| `-i, --input <PATH>...` | Workflow directories or individual `.ts` files (falls back to `workflows_dir` in config) |
+| `--json` | Output as JSON for scripting |
+
+**Examples.**
+
+<div v-pre>
+
+```bash
+# List all actions
+gaji list
+
+# List actions from specific files
+gaji list -i workflows/ci.ts workflows/release.ts
+
+# JSON output for scripting
+gaji list --json
+
+# Pipe to jq for filtering
+gaji list --json | jq 'keys'
+```
+
+</div>
+
+**What it does.**
+
+- Scans all `.ts` files in the specified paths
+- Extracts `getAction()` calls
+- Groups results by action reference, showing which files use each action
+- With `--json`: outputs a JSON object mapping action references to file paths
+
+This command is useful for auditing which actions are in use across your workflows and for building tooling to automate version updates.
+
+---
+
 ### `gaji add`
 
 Add a GitHub Action and generate types.
