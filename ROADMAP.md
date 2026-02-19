@@ -224,6 +224,95 @@ Currently gaji uses `.gaji.toml` (committed) and `.gaji.local.toml` (gitignored)
 | `.gaji.toml` | `gaji.config.ts` | Yes |
 | `.gaji.local.toml` | `gaji.config.local.ts` | No (.gitignore) |
 
+### Configuration Examples (Before → After)
+
+#### Before (TOML)
+
+`.gaji.toml`:
+```toml
+[project]
+workflows_dir = "workflows"
+output_dir = ".github"
+generated_dir = "generated"
+
+[watch]
+debounce_ms = 500
+ignored_patterns = ["dist", "tmp"]
+
+[build]
+validate = true
+format = true
+cache_ttl_days = 14
+```
+
+`.gaji.local.toml`:
+```toml
+[github]
+token = "ghp_xxxxxxxxxxxxxxxxxxxx"
+api_url = "https://github.example.com"
+```
+
+#### After (TypeScript)
+
+`gaji.config.ts`:
+```typescript
+import { defineConfig } from "./generated/index.js";
+
+export default defineConfig({
+    workflows: "workflows",
+    output: ".github",
+    generated: "generated",
+    watch: {
+        debounce: 500,
+        ignore: ["dist", "tmp"],
+    },
+    build: {
+        validate: true,
+        format: true,
+        cacheTtlDays: 14,
+    },
+});
+```
+
+`gaji.config.local.ts`:
+```typescript
+import { defineConfig } from "./generated/index.js";
+
+export default defineConfig({
+    github: {
+        token: "ghp_xxxxxxxxxxxxxxxxxxxx",
+        apiUrl: "https://github.example.com",
+    },
+});
+```
+
+Key differences:
+- Type-safe with autocomplete — `defineConfig` validates all fields
+- camelCase field names (`cacheTtlDays` instead of `cache_ttl_days`, `debounce` instead of `debounce_ms`)
+- Same import pattern as workflow files (`from "./generated/index.js"`)
+- `gaji.config.local.ts` is gitignored, same as `.gaji.local.toml` was
+
+#### Minimal config — defaults are enough
+
+```typescript
+// gaji.config.ts — all defaults, same as having no .gaji.toml at all
+import { defineConfig } from "./generated/index.js";
+export default defineConfig({});
+```
+
+#### GitHub Enterprise config
+
+```typescript
+// gaji.config.ts
+import { defineConfig } from "./generated/index.js";
+
+export default defineConfig({
+    github: {
+        apiUrl: "https://github.example.com",
+    },
+});
+```
+
 ### Config API
 
 The generated `index.d.ts` exports a `defineConfig` function and `GajiConfig` interface:
@@ -249,34 +338,6 @@ export interface GajiConfig {
 }
 
 export declare function defineConfig(config: GajiConfig): GajiConfig;
-```
-
-### Example: `gaji.config.ts`
-
-```typescript
-import { defineConfig } from "./generated/index.js";
-
-export default defineConfig({
-    workflows: "workflows",
-    output: ".github",
-    generated: "generated",
-    build: {
-        cacheTtlDays: 14,
-    },
-});
-```
-
-### Example: `gaji.config.local.ts`
-
-```typescript
-import { defineConfig } from "./generated/index.js";
-
-export default defineConfig({
-    github: {
-        token: "ghp_xxxxxxxxxxxxxxxxxxxx",
-        apiUrl: "https://github.example.com",
-    },
-});
 ```
 
 ### Resolution Order
@@ -442,6 +503,8 @@ Add `defineConfig` declaration to `CLASS_DECLARATIONS_TEMPLATE`.
 - Update "Key Design Patterns" section: remove `CompositeJob`, rename classes
 - Update "Runtime Class Hierarchy" table: apply renames, remove CompositeJob
 - Update "Adding a new action type" and "Adding a new job type" sections
+- Update "Configuration Files" table: `.gaji.toml` → `gaji.config.ts`, `.gaji.local.toml` → `gaji.config.local.ts`
+- Update "Configuration hierarchy" line: `env vars > gaji.config.local.ts > gaji.config.ts > defaults`
 
 #### 9b. `src/init/templates.rs` — `EXAMPLE_WORKFLOW_TEMPLATE`
 - No class name changes needed (only uses `Job`, `Workflow`, `getAction`)
@@ -491,6 +554,13 @@ Add `defineConfig` declaration to `CLASS_DECLARATIONS_TEMPLATE`.
 #### 9j. `README.md`
 - Update `CompositeAction` → `Action`, `CallAction` → `ActionRef` in examples
 - Update `CallJob` → `WorkflowCall` in reusable workflow example
+- Update configuration section: show `gaji.config.ts` instead of `.gaji.toml`
+
+#### 9k. Documentation — TypeScript Configuration
+- `docs/guide/writing-workflows.md`: Update configuration section with `gaji.config.ts` examples
+- `docs/reference/api.md`: Add `defineConfig` and `GajiConfig` to API reference
+- `docs/guide/migration.md`: Add `.gaji.toml` → `gaji.config.ts` migration instructions
+- `docs/ko/` mirrors: Apply same config documentation changes to Korean docs
 
 ## Files Modified
 
