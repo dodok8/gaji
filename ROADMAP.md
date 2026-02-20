@@ -131,9 +131,9 @@ new Job("ubuntu-latest")
   }));
 ```
 
-## API Design: addStep Callback vs beginSteps/endSteps
+## API Design: addStep Callback vs beginSteps/endSteps vs steps() Builder
 
-Two candidate patterns for providing step context. Analysis below.
+Three candidate patterns for providing step context. Analysis below.
 
 ### Pattern A: addStep Callback (current plan)
 
@@ -197,18 +197,51 @@ Job<{}>
   → .outputs((cx) => ({ ref: cx.co.ref }))  → Job<{ co: CheckoutOutputs }, { ref: string }>
 ```
 
+### Pattern C: `steps()` Callback Builder
+
+`Job` has a `steps()` method that takes a callback. The callback receives a step builder (`$`) with a short `add()` method. Context accumulates inside the builder and transfers to `Job` when the callback returns.
+
+```typescript
+const checkout = getAction("actions/checkout@v5");
+const setupNode = getAction("actions/setup-node@v4");
+
+const build = new Job("ubuntu-latest", {
+    permissions: { contents: "read" },
+  })
+  .steps($ => $
+    .add(checkout({ id: "co" }))
+    .add(setupNode({ with: { "node-version": "20" } }))
+    .add(cx => ({
+      name: "Show ref",
+      run: "echo " + cx.co.ref,
+    }))
+  )
+  .outputs(cx => ({ ref: cx.co.ref }));
+```
+
+Type flow:
+```
+Job<{}>
+  → .steps($ => $                                → StepBuilder<{}>
+      .add(checkout({ id: "co" }))               → StepBuilder<{ co: CheckoutOutputs }>
+      .add(setupNode({ ... }))                   → StepBuilder<{ co: CheckoutOutputs }>  (no id → no expansion)
+      .add(cx => ...)                            → StepBuilder<{ co: CheckoutOutputs }>  (cx.co.ref ✅)
+    )                                            → Job<{ co: CheckoutOutputs }>
+  → .outputs(cx => ({ ref: cx.co.ref }))         → Job<{ co: CheckoutOutputs }, { ref: string }>
+```
+
 ### Comparison
 
-| | Pattern A: addStep Callback | Pattern B: beginSteps/endSteps |
-|---|---|---|
-| **API surface** | `addStep` with 4 overloads | `addStep` (4 overloads) + `beginSteps` + `endSteps` + `StepBuilder` class |
-| **Backwards compatible** | Yes — existing `addStep(step)` unchanged | No — must wrap all steps in `beginSteps/endSteps` |
-| **Boilerplate** | None | 2 extra method calls per job |
-| **Separation of concerns** | Job config and steps mixed in same chain | Job config before `beginSteps`, steps between begin/end |
-| **Type complexity** | 4 overloads on `Job` | 4 overloads on `StepBuilder`, plus `beginSteps`/`endSteps` return types |
-| **Runtime complexity** | `_cx` tracking in `Job` | `_cx` tracking in `StepBuilder`, transfer to `Job` on `endSteps` |
-| **Workflow addJob** | Same chain: `addJob("id", (cx) => Job)` | Needs similar `beginJobs/endJobs` or inconsistent with step pattern |
-| **Existing workflow files** | No changes needed | Every `addStep` call must be wrapped |
+| | Pattern A: addStep Callback | Pattern B: beginSteps/endSteps | Pattern C: steps() Callback Builder |
+|---|---|---|---|
+| **API surface** | `addStep` with 4 overloads | `addStep` (4 overloads) + `beginSteps` + `endSteps` + `StepBuilder` class | `steps()` + `StepBuilder.add` with 4 overloads |
+| **Backwards compatible** | Yes — existing `addStep(step)` unchanged | No — must wrap all steps in `beginSteps/endSteps` | No — `addStep` replaced by `steps($ => $.add(...))` |
+| **Boilerplate** | None | 2 extra method calls per job | 1 wrapping callback per job |
+| **Separation of concerns** | Job config and steps mixed in same chain | Job config before `beginSteps`, steps between begin/end | Job config outside `steps()`, steps inside callback |
+| **Type complexity** | 4 overloads on `Job` | 4 overloads on `StepBuilder`, plus `beginSteps`/`endSteps` return types | 4 overloads on `StepBuilder`, `steps()` infers `Cx` from callback return |
+| **Runtime complexity** | `_cx` tracking in `Job` | `_cx` tracking in `StepBuilder`, transfer to `Job` on `endSteps` | `_cx` tracking in `StepBuilder`, transfer to `Job` on callback return |
+| **Workflow addJob** | Same chain: `addJob("id", (cx) => Job)` | Needs similar `beginJobs/endJobs` or inconsistent with step pattern | Consistent — `addJob` callback and `steps()` callback are both functional |
+| **Existing workflow files** | No changes needed | Every `addStep` call must be wrapped | Every `addStep` call must be wrapped in `steps()` |
 
 ### Pattern A — Advantages
 
@@ -230,6 +263,21 @@ Job<{}>
 3. **Extra type**: `StepBuilder<Cx>` is a new exported type that users must understand
 4. **Forgetting `endSteps()`**: Type error if you forget `.endSteps()`, but the error message is confusing ("Property 'outputs' does not exist on type 'StepBuilder'")
 5. **No benefit for simple jobs**: Jobs without context access still need the wrapping
+
+### Pattern C — Advantages
+
+1. **Explicit scope**: Steps are grouped inside a callback, visually distinct from job config — same benefit as B
+2. **No forgetting `endSteps()`**: Unlike B, the callback handles scoping automatically; no extra closing call to forget
+3. **Enforced ordering**: Job-level config (permissions, needs) stays outside `steps()`, preventing accidental mixing
+4. **Shorter method name**: `add()` instead of `addStep()` reduces visual noise in step chains
+5. **Consistent functional style**: `Workflow.addJob` callback and `steps()` callback are both functional patterns — the API feels uniform
+
+### Pattern C — Disadvantages
+
+1. **Breaking change**: All existing `addStep()` calls must be wrapped in `steps($ => ...)`
+2. **Extra nesting**: One level of indentation deeper than A
+3. **Internal type required**: `StepBuilder<Cx>` is needed internally (like B), though it can be hidden behind a callback type parameter
+4. **All jobs need wrapping**: Even simple jobs without context need `steps($ => $.add(...))`
 
 ### Complex example comparison
 
@@ -269,6 +317,28 @@ new Workflow({ name: "CI", on: { push: {} } })
       .beginSteps()
         .addStep({ run: "echo " + cx.build.ref })
       .endSteps()
+  )
+  .build("ci");
+```
+
+Pattern C:
+```typescript
+new Workflow({ name: "CI", on: { push: {} } })
+  .addJob("build",
+    new Job("ubuntu-latest")
+      .steps($ => $
+        .add(checkout({ id: "co" }))
+        .add(setupNode({ with: { "node-version": "20" } }))
+        .add(cx => ({ name: "Log", run: "echo " + cx.co.ref }))
+      )
+      .outputs(cx => ({ ref: cx.co.ref }))
+  )
+  .addJob("deploy", cx =>
+    new Job("ubuntu-latest")
+      .needs("build")
+      .steps($ => $
+        .add({ run: "echo " + cx.build.ref })
+      )
   )
   .build("ci");
 ```
