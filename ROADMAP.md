@@ -25,8 +25,10 @@ The current API requires storing step/job references in variables to access outp
 | `CallJob` | `WorkflowCall` | Calls a reusable workflow |
 | `CallAction` | `ActionRef` | Reference to a local action |
 | `jobOutputs` | `jobOutputs` | Keep as compatibility helper; primary pattern moves to `Workflow.jobs()` context |
-
-> Note: Config/runs interfaces (`JavaScriptActionConfig`, `JavaScriptActionRuns`, etc.) are kept as-is. They describe the underlying GitHub Actions metadata format, not user-facing concepts.
+| `JavaScriptActionConfig` | `NodeActionConfig` | Matches `NodeAction` rename |
+| `JavaScriptActionRuns` | `NodeActionRuns` | Matches `NodeAction` rename |
+| `DockerActionConfig` | `DockerActionConfig` | Keep |
+| `DockerActionRuns` | `DockerActionRuns` | Keep |
 
 ## Usage Examples (Before → After)
 
@@ -658,7 +660,7 @@ Each file is independent:
 
 All in `src/generator/templates.rs`. Must be done in order since they're in the same file. Can run in parallel with Phase 1.
 
-#### 2-1. `BASE_TYPES_TEMPLATE` — ActionStep Id generic (easy)
+#### 2-1. `BASE_TYPES_TEMPLATE` — ActionStep Id generic + interface renames (easy)
 
 Add `Id` generic to `ActionStep`:
 
@@ -668,6 +670,10 @@ export interface ActionStep<O = {}, Id extends string = string> extends JobStep 
     readonly id: Id;
 }
 ```
+
+Rename config/runs interfaces:
+- `JavaScriptActionConfig` → `NodeActionConfig`
+- `JavaScriptActionRuns` → `NodeActionRuns`
 
 #### 2-2. `GET_ACTION_FALLBACK_DECL_TEMPLATE` — Id generic (easy)
 
@@ -688,7 +694,7 @@ export declare function getAction<T extends string>(ref: T): {
 - `Workflow<Cx>` with `jobs()` method
 - Remove `CompositeJob`
 - `Action<Cx>` (was `CompositeAction`) with `steps()` method
-- `NodeAction` (was `JavaScriptAction`)
+- `NodeAction` (was `JavaScriptAction`) — constructor uses `NodeActionConfig`, `NodeActionRuns`
 - `WorkflowCall` (was `CallJob`)
 - `ActionRef` (was `CallAction`) — `from()` accepts `Action<any> | NodeAction | DockerAction`
 - `jobOutputs` accepts `Job<any, O>` (kept as compatibility helper)
@@ -724,11 +730,15 @@ Add `defineConfig` declaration to `CLASS_DECLARATIONS_TEMPLATE`.
 
 Each group touches different files. All depend on Phase 2 for the new type/runtime shapes.
 
-#### 3A. `src/generator/mod.rs` — getAction overloads (easy)
+#### 3A. `src/generator/mod.rs` — getAction overloads + type renames (easy)
 
 Update `getAction` overloads for actions WITH outputs:
 - Add `<Id extends string>` generic on id-required call signature
 - Return type becomes `ActionStep<Outputs, Id>`
+
+Rename type imports/exports:
+- `JavaScriptActionConfig` → `NodeActionConfig`
+- `JavaScriptActionRuns` → `NodeActionRuns`
 
 Update comment on line 288.
 
