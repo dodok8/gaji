@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0](https://github.com/dodok8/gaji/compare/v0.6.0...v1.0.0) - 2026-02-22
+
+### Other
+
+- gaji 1.0.0 — callback builder API and TypeScript config ([#68](https://github.com/dodok8/gaji/pull/68))
+
 ## [0.6.0](https://github.com/dodok8/gaji/compare/v0.5.1...v0.6.0) - 2026-02-20
 
 ### Added
