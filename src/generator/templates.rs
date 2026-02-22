@@ -296,6 +296,8 @@ export declare class JobBuilder<Cx = {}> {
         id: Id, jobFn: (output: Cx) => Job<any, O>
     ): JobBuilder<Cx & Record<Id, O>>;
     add(id: string, jobFn: (output: Cx) => Job | WorkflowCall): JobBuilder<Cx>;
+    add(job: Job | WorkflowCall): JobBuilder<Cx>;
+    add(jobFn: (output: Cx) => Job | WorkflowCall): JobBuilder<Cx>;
 }
 
 export declare class Workflow<Cx = {}> {
@@ -436,14 +438,26 @@ export class JobBuilder {
     constructor() {
         this._jobs = {};
         this._ctx = {};
+        this._counter = 0;
     }
 
-    add(id, jobOrFn) {
-        var job;
-        if (typeof jobOrFn === 'function') {
-            job = jobOrFn(this._ctx);
+    add(idOrJob, jobOrFn) {
+        var id, job;
+        if (typeof idOrJob === 'string') {
+            id = idOrJob;
+            if (typeof jobOrFn === 'function') {
+                job = jobOrFn(this._ctx);
+            } else {
+                job = jobOrFn;
+            }
         } else {
-            job = jobOrFn;
+            this._counter++;
+            id = "job-" + this._counter;
+            if (typeof idOrJob === 'function') {
+                job = idOrJob(this._ctx);
+            } else {
+                job = idOrJob;
+            }
         }
         this._jobs[id] = job;
         if (job._outputs) {
