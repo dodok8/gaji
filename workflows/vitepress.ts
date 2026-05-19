@@ -1,4 +1,5 @@
 import { getAction, Job, Workflow } from "../generated/index.js";
+import { addBuildGajiSteps } from "./lib/common.ts";
 
 const checkout = getAction("actions/checkout@v5");
 const rustToolchain = getAction("dtolnay/rust-toolchain@stable");
@@ -11,12 +12,12 @@ const deploy = new Job("ubuntu-latest", {
     contents: "write",
   },
 }).steps((s) =>
-  s
-    .add(checkout({ with: { "fetch-depth": 0 } }))
-    .add(rustToolchain({}))
-    .add(rustCache({}))
-    .add({ name: "Build gaji", run: "cargo build --release" })
-    .add({ name: "Generate types", run: "./target/release/gaji dev" })
+  addBuildGajiSteps(
+    s
+      .add(checkout({ with: { "fetch-depth": 0 } }))
+      .add(rustToolchain({}))
+      .add(rustCache({}))
+  )
     .add(miseAction({}))
     .add({ name: "Install dependencies", run: "pnpm install --frozen-lockfile", "working-directory": "docs" })
     .add({ name: "Build docs", run: "pnpm docs:build", "working-directory": "docs" })

@@ -68,6 +68,8 @@ tests/
 workflows/           # gaji's own CI workflows (self-dogfooding)
 ├── audit.ts
 ├── ci.ts
+├── lib/
+│   └── common.ts   # Local import test — shared step helpers imported by sibling workflows
 ├── release-plz.ts
 ├── release.ts
 ├── update-workflows.ts
@@ -85,7 +87,7 @@ The core pipeline is: **TypeScript → Parse → Execute → YAML**
 1. **Parser** (`parser/`): Uses oxc to parse TypeScript and extract `getAction("owner/repo@version")` calls via AST visitor pattern
 2. **Fetcher** (`fetcher.rs`): Downloads `action.yml` from GitHub for referenced actions
 3. **Generator** (`generator/`): Generates TypeScript type definitions (`.d.ts`) from action metadata
-4. **Executor** (`executor.rs`): Strips TypeScript types with oxc, bundles with runtime JS, executes in QuickJS
+4. **Executor** (`executor.rs`): Strips TypeScript types with oxc, resolves module imports (including the runtime) transitively via `ModuleResolver`, executes in QuickJS; falls back to npx tsx when any dependency is unresolvable
 5. **Builder** (`builder.rs`): Orchestrates the full pipeline, converts JSON output to YAML, writes workflow files
 
 ## Key Design Patterns
@@ -178,7 +180,7 @@ The release binary is optimized for size (important for npm distribution):
 
 **Adding a new job type**: Extend the `Job` class. Job subclasses inherit `steps()`, `outputs()`, and `toJSON()` to produce standard `JobDefinition` output. No separate runtime class is needed — use JavaScript class inheritance (`class MyJob extends Job`).
 
-**Modifying the build pipeline**: Core logic is in `builder.rs` (orchestration) and `executor.rs` (JS execution). The executor strips types with oxc and runs the result in QuickJS.
+**Modifying the build pipeline**: Core logic is in `builder.rs` (orchestration) and `executor.rs` (JS execution). The executor strips types with oxc and resolves module imports via `ModuleResolver`. QuickJS is tried first; if any dependency is unresolvable, `builder.rs` falls back to npx tsx.
 
 ## Runtime Class Hierarchy
 

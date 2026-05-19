@@ -1,10 +1,9 @@
-use std::cell::RefCell;
 use std::path::{Path, PathBuf};
-use std::rc::Rc;
 
 use anyhow::{Context, Result};
-use rquickjs::{function::Func, Context as JsContext, Runtime as JsRuntime};
 use serde::Deserialize;
+
+use crate::executor::{self, ModuleResolver};
 
 pub const TS_CONFIG_FILE: &str = "gaji.config.ts";
 pub const TS_LOCAL_CONFIG_FILE: &str = "gaji.config.local.ts";
@@ -204,43 +203,44 @@ impl From<TsGajiConfig> for Config {
     }
 }
 
-/// Execute JavaScript in QuickJS and capture config JSON via `__gha_set_config`.
-fn execute_config_js(code: &str) -> Result<String> {
-    let result: Rc<RefCell<Option<String>>> = Rc::new(RefCell::new(None));
-
-    {
-        let rt = JsRuntime::new().context("Failed to create QuickJS runtime")?;
-        let ctx = JsContext::full(&rt).context("Failed to create QuickJS context")?;
-
-        let code_owned = code.to_string();
-
-        ctx.with(|ctx| {
-            let result_clone = result.clone();
-
-            let set_config_fn = Func::from(move |json: String| {
-                *result_clone.borrow_mut() = Some(json);
-            });
-
-            ctx.globals()
-                .set("__gha_set_config", set_config_fn)
-                .map_err(|e| anyhow::anyhow!("Failed to set __gha_set_config: {}", e))?;
-
-            ctx.eval::<(), _>(code_owned.as_bytes())
-                .map_err(|e| anyhow::anyhow!("QuickJS config evaluation error: {}", e))?;
-
-            Ok::<_, anyhow::Error>(())
-        })?;
-    }
-
-    let json = Rc::try_unwrap(result)
-        .map_err(|_| anyhow::anyhow!("Failed to unwrap Rc"))?
-        .into_inner()
-        .context("Config script did not call __gha_set_config")?;
-
-    Ok(json)
-}
 
 impl Config {
+    /// Load config using a shared `ModuleResolver`.
+    ///
+    /// Shares module resolution with workflow builds: if `generated/index.js` is already
+    /// cached in `resolver`, it is not re-parsed. Falls back to `load_from_ts` when the
+    /// config file is QuickJS N/A (e.g. `generated/index.js` does not yet exist).
+    pub fn load_with_resolver(resolver: &mut ModuleResolver) -> Result<Self> {
+        let ts_path = Path::new(TS_CONFIG_FILE);
+        if ts_path.exists() {
+            let mut config = Self::load_from_ts_impl(ts_path, resolver)?;
+            let ts_local_path = Path::new(TS_LOCAL_CONFIG_FILE);
+            if ts_local_path.exists() {
+                let local = Self::load_from_ts_impl(ts_local_path, resolver)?;
+                config.merge_local(local);
+            }
+            return Ok(config);
+        }
+        Self::load_with_local(
+            Path::new(TOML_CONFIG_FILE),
+            Path::new(TOML_LOCAL_CONFIG_FILE),
+        )
+    }
+
+    /// Load a single TS config file via the resolver.
+    /// Unresolvable imports (e.g. `generated/index.js` on a fresh project) are
+    /// skipped — `defineConfig` is injected as an identity function synthetically.
+    fn load_from_ts_impl(path: &Path, resolver: &mut ModuleResolver) -> Result<Self> {
+        if !path.exists() {
+            return Ok(Config::default());
+        }
+        let json = executor::execute_config(resolver, path)
+            .with_context(|| format!("Failed to execute config: {}", path.display()))?;
+        let ts_config: TsGajiConfig = serde_json::from_str(&json)
+            .with_context(|| format!("Failed to parse config JSON from {}", path.display()))?;
+        Ok(Config::from(ts_config))
+    }
+
     /// Load config: try `gaji.config.ts` first, fall back to `.gaji.toml`.
     pub fn load() -> Result<Self> {
         let ts_path = Path::new(TS_CONFIG_FILE);
@@ -264,41 +264,10 @@ impl Config {
         )
     }
 
-    /// Load config from a TypeScript file by stripping types, executing in QuickJS.
+    /// Load config from a TypeScript file, executing in QuickJS.
     pub fn load_from_ts(path: &Path) -> Result<Self> {
-        if !path.exists() {
-            return Ok(Config::default());
-        }
-
-        let source = std::fs::read_to_string(path)
-            .with_context(|| format!("Failed to read config file: {}", path.display()))?;
-
-        let filename = path
-            .file_name()
-            .unwrap_or_default()
-            .to_string_lossy()
-            .to_string();
-
-        // Strip TypeScript types
-        let js = crate::executor::strip_typescript(&source, &filename)?;
-
-        // Remove import/export statements
-        let js = crate::executor::remove_imports(&js);
-
-        // Wrap: override defineConfig to identity, capture result
-        let wrapped = format!(
-            r#"function defineConfig(c) {{ return c; }}
-var __config_result = {};
-__gha_set_config(JSON.stringify(__config_result));"#,
-            js.trim().trim_end_matches(';')
-        );
-
-        let json = execute_config_js(&wrapped)?;
-
-        let ts_config: TsGajiConfig = serde_json::from_str(&json)
-            .with_context(|| format!("Failed to parse config JSON from {}", path.display()))?;
-
-        Ok(Config::from(ts_config))
+        let mut resolver = ModuleResolver::default();
+        Self::load_from_ts_impl(path, &mut resolver)
     }
 
     pub fn load_from(path: &Path) -> Result<Self> {
@@ -659,5 +628,36 @@ export default defineConfig({
 
         // Without env var, falls back to TS config value
         assert_eq!(config.resolve_token(), Some("ts_config_token".to_string()));
+    }
+
+    #[test]
+    fn test_load_from_ts_with_resolver_basic() {
+        // Config without generated/index.js present → resolver marks it N/A → fallback path
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join("gaji.config.ts");
+        std::fs::write(
+            &config_path,
+            r#"
+import { defineConfig } from "./generated/index.js";
+
+export default defineConfig({
+    workflows: "src/workflows",
+    output: "dist/.github",
+});
+"#,
+        )
+        .unwrap();
+
+        let mut resolver = ModuleResolver::default();
+        // load_from_ts_impl is private; exercise it through load_with_resolver by
+        // temporarily changing working directory is impractical in a unit test, so
+        // call it directly via the private helper using the test's config path.
+        let config = Config::load_from_ts_impl(&config_path, &mut resolver).unwrap();
+        assert_eq!(config.project.workflows_dir, "src/workflows");
+        assert_eq!(config.project.output_dir, "dist/.github");
+
+        // A second call with the same resolver should produce the same result.
+        let config2 = Config::load_from_ts_impl(&config_path, &mut resolver).unwrap();
+        assert_eq!(config2.project.workflows_dir, "src/workflows");
     }
 }

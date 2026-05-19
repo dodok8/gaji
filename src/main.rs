@@ -11,6 +11,7 @@ use gaji::builder::WorkflowBuilder;
 use gaji::cache::Cache;
 use gaji::cli::{Cli, Commands};
 use gaji::config::Config;
+use gaji::executor::ModuleResolver;
 use gaji::generator::TypeGenerator;
 use gaji::init::{self, InitOptions};
 use gaji::parser;
@@ -147,7 +148,8 @@ async fn cmd_build(inputs: &[String], output: Option<&str>, dry_run: bool) -> Re
         println!("{} Building workflows...\n", "🔨".cyan());
     }
 
-    let config = Config::load()?;
+    let mut resolver = ModuleResolver::default();
+    let config = Config::load_with_resolver(&mut resolver)?;
 
     let input_paths: Vec<PathBuf> = if inputs.is_empty() {
         vec![PathBuf::from(&config.project.workflows_dir)]
@@ -156,7 +158,12 @@ async fn cmd_build(inputs: &[String], output: Option<&str>, dry_run: bool) -> Re
     };
 
     let output_dir = output.unwrap_or(&config.project.output_dir);
-    let builder = WorkflowBuilder::new(input_paths, PathBuf::from(output_dir), dry_run);
+    let mut builder = WorkflowBuilder::new_with_resolver(
+        input_paths,
+        PathBuf::from(output_dir),
+        dry_run,
+        resolver,
+    );
 
     let built = builder.build_all().await?;
 

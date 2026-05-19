@@ -7,13 +7,14 @@ use indicatif::{ProgressBar, ProgressStyle};
 use tokio::fs;
 
 use crate::config::Config as GajiConfig;
-use crate::executor;
+use crate::executor::{self, ModuleResolver};
 
 pub struct WorkflowBuilder {
     input_paths: Vec<PathBuf>,
     output_dir: PathBuf,
     dry_run: bool,
     ignored_patterns: Vec<String>,
+    resolver: ModuleResolver,
 }
 
 fn default_ignored_patterns() -> Vec<String> {
@@ -42,10 +43,36 @@ impl WorkflowBuilder {
             output_dir,
             dry_run,
             ignored_patterns,
+            resolver: ModuleResolver::default(),
         }
     }
 
-    pub async fn build_all(&self) -> Result<Vec<PathBuf>> {
+    pub fn new_with_resolver(
+        input_paths: Vec<PathBuf>,
+        output_dir: PathBuf,
+        dry_run: bool,
+        resolver: ModuleResolver,
+    ) -> Self {
+        let ignored_patterns = GajiConfig::load().map_or_else(
+            |_| default_ignored_patterns(),
+            |config| {
+                if config.watch.ignored_patterns.is_empty() {
+                    default_ignored_patterns()
+                } else {
+                    config.watch.ignored_patterns
+                }
+            },
+        );
+        Self {
+            input_paths,
+            output_dir,
+            dry_run,
+            ignored_patterns,
+            resolver,
+        }
+    }
+
+    pub async fn build_all(&mut self) -> Result<Vec<PathBuf>> {
         // Ensure output directory exists (skip in dry-run mode)
         if !self.dry_run {
             fs::create_dir_all(&self.output_dir).await?;
@@ -145,7 +172,7 @@ impl WorkflowBuilder {
 
     /// Build a single workflow file. Returns multiple output paths since one
     /// file can define multiple workflows/actions via multiple .build() calls.
-    pub async fn build_workflow(&self, workflow_path: &Path) -> Result<Vec<PathBuf>> {
+    pub async fn build_workflow(&mut self, workflow_path: &Path) -> Result<Vec<PathBuf>> {
         println!(
             "{} Building {}...",
             "🔨".cyan(),
@@ -155,60 +182,42 @@ impl WorkflowBuilder {
                 .to_string_lossy()
         );
 
-        // Try QuickJS execution first if generated/index.js exists
-        // Look relative to CWD (project root), not relative to input_dir
-        let runtime_js_path = PathBuf::from("generated/index.js");
-
-        let build_outputs = if runtime_js_path.exists() {
-            match executor::execute_workflow(workflow_path, &runtime_js_path) {
-                Ok(outputs) if !outputs.is_empty() => outputs,
-                Ok(_) => {
-                    // QuickJS succeeded but no build() calls found, try fallback
-                    eprintln!(
-                        "   {} QuickJS: no build() calls found, trying npx tsx fallback...",
-                        "⚠️".yellow()
-                    );
-                    let json = execute_workflow_npx(workflow_path)?;
-                    vec![executor::BuildOutput {
-                        id: workflow_path
-                            .file_stem()
-                            .unwrap_or_default()
-                            .to_string_lossy()
-                            .to_string(),
-                        json,
-                        output_type: "workflow".to_string(),
-                    }]
-                }
-                Err(e) => {
-                    eprintln!(
-                        "   {} QuickJS failed ({}), trying npx tsx fallback...",
-                        "⚠️".yellow(),
-                        e
-                    );
-                    let json = execute_workflow_npx(workflow_path)?;
-                    vec![executor::BuildOutput {
-                        id: workflow_path
-                            .file_stem()
-                            .unwrap_or_default()
-                            .to_string_lossy()
-                            .to_string(),
-                        json,
-                        output_type: "workflow".to_string(),
-                    }]
-                }
+        let build_outputs = match executor::execute_workflow(&mut self.resolver, workflow_path) {
+            Ok(outputs) if !outputs.is_empty() => outputs,
+            Ok(_) => {
+                // QuickJS succeeded but no build() calls found, try fallback
+                eprintln!(
+                    "   {} QuickJS: no build() calls found, trying npx tsx fallback...",
+                    "⚠️".yellow()
+                );
+                let json = execute_workflow_npx(workflow_path)?;
+                vec![executor::BuildOutput {
+                    id: workflow_path
+                        .file_stem()
+                        .unwrap_or_default()
+                        .to_string_lossy()
+                        .to_string(),
+                    json,
+                    output_type: "workflow".to_string(),
+                }]
             }
-        } else {
-            // No runtime JS, use npx tsx directly
-            let json = execute_workflow_npx(workflow_path)?;
-            vec![executor::BuildOutput {
-                id: workflow_path
-                    .file_stem()
-                    .unwrap_or_default()
-                    .to_string_lossy()
-                    .to_string(),
-                json,
-                output_type: "workflow".to_string(),
-            }]
+            Err(e) => {
+                eprintln!(
+                    "   {} QuickJS failed ({}), trying npx tsx fallback...",
+                    "⚠️".yellow(),
+                    e
+                );
+                let json = execute_workflow_npx(workflow_path)?;
+                vec![executor::BuildOutput {
+                    id: workflow_path
+                        .file_stem()
+                        .unwrap_or_default()
+                        .to_string_lossy()
+                        .to_string(),
+                    json,
+                    output_type: "workflow".to_string(),
+                }]
+            }
         };
 
         let mut output_paths = Vec::new();
@@ -705,7 +714,7 @@ mod tests {
     #[tokio::test]
     async fn test_build_all_empty_dir() {
         let dir = TempDir::new().unwrap();
-        let builder = WorkflowBuilder::new(
+        let mut builder = WorkflowBuilder::new(
             vec![dir.path().to_path_buf()],
             dir.path().join("output"),
             false,
