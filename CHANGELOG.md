@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0](https://github.com/dodok8/gaji/compare/v1.1.0...v1.2.0) - 2026-09-06
+
+### Added
+
+- Fallback to npx wrapper script on windows ([#77](https://github.com/dodok8/gaji/pull/77))
+- show quickjs error details. ([#78](https://github.com/dodok8/gaji/pull/78))
+
 ## [1.1.0](https://github.com/dodok8/gaji/compare/v1.0.0...v1.1.0) - 2026-02-23
 
 ### Added
