@@ -1,3 +1,5 @@
+#[cfg(windows)]
+use std::cell::OnceCell;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -273,9 +275,28 @@ impl WorkflowBuilder {
     }
 }
 
-/// Execute a workflow file using npx tsx (fallback strategy)
+#[cfg(not(windows))]
+fn get_npx() -> Result<&'static str> {
+    Ok("npx")
+}
+
+#[cfg(windows)]
+fn get_npx() -> Result<&'static str> {
+    std::thread_local! {
+        static NPX: OnceCell<Option<&'static str>> = const { OnceCell::new() };
+    }
+    NPX.with(|npx| {
+        *npx.get_or_init(|| {
+            ["npx", "npx.ps1", "npx.cmd"]
+                .into_iter()
+                .find(|candidate| Command::new(candidate).arg("--version").output().is_ok())
+        })
+    })
+    .context("Failed to find npx")
+}
+
 fn execute_workflow_npx(workflow_path: &Path) -> Result<String> {
-    let output = Command::new("npx")
+    let output = Command::new(get_npx()?)
         .args(["tsx", workflow_path.to_str().unwrap()])
         .output();
 
@@ -287,7 +308,7 @@ fn execute_workflow_npx(workflow_path: &Path) -> Result<String> {
         }
         Err(_) => {
             // Try ts-node as fallback
-            let output = Command::new("npx")
+            let output = Command::new(get_npx()?)
                 .args(["ts-node", workflow_path.to_str().unwrap()])
                 .output()
                 .context("Neither tsx nor ts-node is available")?;

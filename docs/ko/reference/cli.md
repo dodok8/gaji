@@ -132,7 +132,7 @@ gaji build -i workflows/ci.ts workflows/release.ts
 **동작.**
 
 - 지정된 경로의 모든 `.ts` 파일 찾기
-- 내장 QuickJS 엔진으로 실행 (`npx tsx` 폴백)
+- 내장 QuickJS 엔진으로 실행 (`npx tsx` 폴백; Windows에서는 `npx`를 찾지 못하면 `npx.ps1`, `npx.cmd` 순으로 탐색)
 - 출력을 YAML로 변환
 - 워크플로우를 `.github/workflows/`에 작성
 - 컴포지트 액션을 `.github/actions/<이름>/action.yml`에 작성

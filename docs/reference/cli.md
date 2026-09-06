@@ -132,7 +132,7 @@ Validation and formatting options are configured via `.gaji.toml`, not CLI flags
 **What it does.**
 
 - Finds all `.ts` files in the specified paths
-- Executes them with the built-in QuickJS engine (falls back to `npx tsx`)
+- Executes them with the built-in QuickJS engine (falls back to `npx tsx`; on Windows, probes `npx.ps1` and `npx.cmd` if `npx` is not found)
 - Converts output to YAML
 - Writes workflows to `.github/workflows/`
 - Writes composite actions to `.github/actions/<name>/action.yml`

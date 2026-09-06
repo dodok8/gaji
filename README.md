@@ -20,7 +20,7 @@
 - Automatic type generation from `action.yml` files
 - Composite action and reusable workflow support
 - File watching for development (`--watch`)
-- Built-in QuickJS execution with `npx tsx` fallback
+- Built-in QuickJS execution with `npx tsx` fallback (on Windows, probes `npx.ps1` and `npx.cmd` if `npx` is not found)
 - GitHub Enterprise support
 - Single binary distribution (Rust)
 
