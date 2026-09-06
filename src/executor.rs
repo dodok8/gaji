@@ -9,7 +9,7 @@ use oxc_parser::Parser;
 use oxc_semantic::SemanticBuilder;
 use oxc_span::SourceType;
 use oxc_transformer::{TransformOptions, Transformer};
-use rquickjs::{function::Func, Context as JsContext, Runtime as JsRuntime};
+use rquickjs::{function::Func, Context as JsContext, Ctx, Runtime as JsRuntime};
 
 /// Output from a single __gha_build call
 #[derive(Debug, Clone)]
@@ -108,6 +108,25 @@ pub fn remove_imports(source: &str) -> String {
     result.join("\n")
 }
 
+/// Convert a QuickJS result into an `anyhow::Result`, pulling the pending
+/// exception message + stack via `Ctx::catch` when the error is an exception.
+/// Callers add a prefix with `anyhow::Context`.
+pub(crate) fn js_catch<T>(ctx: &Ctx, res: Result<T, rquickjs::Error>) -> Result<T> {
+    res.map_err(|err| {
+        if err.is_exception() {
+            let caught = ctx.catch();
+            let detail = caught
+                .as_exception()
+                .map(|e| e.to_string())
+                .or_else(|| caught.get::<String>().ok())
+                .unwrap_or_else(|| "unknown JS exception".to_string());
+            anyhow::anyhow!("{detail}")
+        } else {
+            anyhow::Error::new(err)
+        }
+    })
+}
+
 /// Register __gha_build host function and evaluate JavaScript with QuickJS.
 /// Uses Rc/RefCell pattern to capture build outputs from JS callbacks.
 pub fn execute_js(code: &str) -> Result<Vec<BuildOutput>> {
@@ -138,8 +157,8 @@ pub fn execute_js(code: &str) -> Result<Vec<BuildOutput>> {
                 .map_err(|e| anyhow::anyhow!("Failed to set __gha_build: {}", e))?;
 
             // Evaluate the bundled JavaScript
-            ctx.eval::<(), _>(code_owned.as_bytes())
-                .map_err(|e| anyhow::anyhow!("QuickJS evaluation error: {}", e))?;
+            js_catch(&ctx, ctx.eval::<(), _>(code_owned.as_bytes()))
+                .context("QuickJS evaluation error")?;
 
             Ok::<_, anyhow::Error>(())
         })?;
@@ -207,6 +226,20 @@ export type { Foo };
         assert_eq!(outputs.len(), 1);
         assert_eq!(outputs[0].id, "test-workflow");
         assert_eq!(outputs[0].output_type, "workflow");
+    }
+
+    #[test]
+    fn test_execute_js_surfaces_exception_message() {
+        let err = execute_js("throw new Error('boom from workflow');").unwrap_err();
+        let msg = format!("{err:#}");
+        assert!(msg.contains("boom from workflow"), "got: {msg}");
+    }
+
+    #[test]
+    fn test_execute_js_surfaces_non_error_throw() {
+        let err = execute_js("throw 'plain string error';").unwrap_err();
+        let msg = format!("{err:#}");
+        assert!(msg.contains("plain string error"), "got: {msg}");
     }
 
     #[test]

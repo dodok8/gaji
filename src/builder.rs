@@ -91,7 +91,10 @@ impl WorkflowBuilder {
                 }
                 Err(e) => {
                     pb.suspend(|| {
-                        eprintln!("{} Failed to build {}: {}", "❌".red(), file.display(), e);
+                        eprintln!("{} Failed to build {}", "❌".red(), file.display());
+                        for line in format!("{e:#}").lines() {
+                            eprintln!("   {}", line.dimmed());
+                        }
                     });
                 }
             }
@@ -180,11 +183,11 @@ impl WorkflowBuilder {
                     }]
                 }
                 Err(e) => {
-                    eprintln!(
-                        "   {} QuickJS failed ({}), trying npx tsx fallback...",
-                        "⚠️".yellow(),
-                        e
-                    );
+                    eprintln!("   {} QuickJS failed", "⚠️".yellow());
+                    for line in format!("{e:#}").lines() {
+                        eprintln!("      {}", line.dimmed());
+                    }
+                    eprintln!("   {} trying npx tsx fallback...", "⚠️".yellow());
                     let json = execute_workflow_npx(workflow_path)?;
                     vec![executor::BuildOutput {
                         id: workflow_path

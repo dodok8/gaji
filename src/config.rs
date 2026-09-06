@@ -225,8 +225,8 @@ fn execute_config_js(code: &str) -> Result<String> {
                 .set("__gha_set_config", set_config_fn)
                 .map_err(|e| anyhow::anyhow!("Failed to set __gha_set_config: {}", e))?;
 
-            ctx.eval::<(), _>(code_owned.as_bytes())
-                .map_err(|e| anyhow::anyhow!("QuickJS config evaluation error: {}", e))?;
+            crate::executor::js_catch(&ctx, ctx.eval::<(), _>(code_owned.as_bytes()))
+                .context("QuickJS config evaluation error")?;
 
             Ok::<_, anyhow::Error>(())
         })?;
